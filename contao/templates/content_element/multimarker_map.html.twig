@@ -1,0 +1,18 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{% block content %}
+    <div
+        id="{{ mapId }}"
+        class="multimarker-map multimarker-map--{{ colorMode }}"
+        style="height:{{ height }};"
+        data-markers="{{ markersJson }}"
+        data-zoom="{{ zoom }}"
+        data-tile-url="{{ tileUrl }}"
+        data-marker-color="{{ markerColor }}"
+        data-hide-attribution="{{ hideAttribution ? '1' : '0' }}"
+        data-color-mode="{{ colorMode }}"
+        data-provider="{{ provider }}"
+        data-google-api-key="{{ googleApiKey }}"
+        data-google-map-id="{{ googleMapId }}"
+    ></div>
+{% endblock %}

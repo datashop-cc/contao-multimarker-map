@@ -1,0 +1,60 @@
+.multimarker-map {
+    width: 100%;
+    background: #eee;
+}
+
+/*
+ * Trick: Leaflet rendert Kartenkacheln und Marker in getrennten Panes
+ * (.leaflet-tile-pane vs. .leaflet-marker-pane). Der Filter wird NUR auf
+ * die Kachel-Ebene angewendet -> Marker bleiben unabhängig vom Kartenmodus
+ * immer in ihrer konfigurierten Farbe sichtbar.
+ */
+.multimarker-map--gray .leaflet-tile-pane {
+    filter: grayscale(100%) contrast(1.05) brightness(1.02);
+}
+
+/* Platz für individuelle Filter im Theme, z.B. Sepia, Invertiert, Markenfarbe-Tint */
+.multimarker-map--custom .leaflet-tile-pane {
+    filter: var(--multimarker-map-filter, grayscale(60%));
+}
+
+.multimarker-map__pin svg {
+    display: block;
+}
+
+.multimarker-map__popup {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.multimarker-map__popup strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 1rem;
+}
+
+.multimarker-map__route-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.multimarker-map__route-link:hover {
+    text-decoration: underline;
+}
+
+/*
+ * Dezente Attribution: erfüllt die ODbL-Lizenzpflicht (Namensnennung),
+ * fällt im Graudesign aber kaum auf. Empfohlen statt vollständigem Ausblenden.
+ */
+.multimarker-map .leaflet-control-attribution {
+    background: rgba(255, 255, 255, 0.55);
+    font-size: 9px;
+    opacity: 0.65;
+    padding: 0 4px;
+}
+
+.multimarker-map .leaflet-control-attribution:hover {
+    opacity: 1;
+}

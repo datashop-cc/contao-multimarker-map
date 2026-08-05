@@ -1,0 +1,12 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Datashop\MultiMarkerMap\:
+    resource: '../src/'
+    exclude:
+      - '../src/DatashopMultiMarkerMapBundle.php'
+      - '../src/ContaoManager/'
+      - '../src/Model/'
