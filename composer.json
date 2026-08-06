@@ -7,7 +7,8 @@
     "homepage": "https://github.com/datashop-cc/contao-multimarker-map",
     "support": {
         "issues": "https://github.com/datashop-cc/contao-multimarker-map/issues",
-        "source": "https://github.com/datashop-cc/contao-multimarker-map"
+        "source": "https://github.com/datashop-cc/contao-multimarker-map",
+        "docs": "https://github.com/datashop-cc/contao-multimarker-map#readme"
     },
     "authors": [
         { "name": "Datashop Riedel KG", "homepage": "https://www.datashop.cc" }
