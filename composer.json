@@ -10,7 +10,7 @@
         "source": "https://github.com/datashop-cc/contao-multimarker-map"
     },
     "authors": [
-        { "name": "datashop.cc", "homepage": "https://datashop.cc" }
+        { "name": "Datashop Riedel KG", "homepage": "https://www.datashop.cc" }
     ],
     "require": {
         "php": "^8.1",
