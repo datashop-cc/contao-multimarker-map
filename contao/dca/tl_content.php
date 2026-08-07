@@ -39,12 +39,45 @@ $GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'][] = static functio
         ->applyToPalette('multimarker_map', 'tl_content');
 };
 
-// Operation "Marker verwalten" analog zum Contao-Muster für Kind-Datensätze
-$GLOBALS['TL_DCA']['tl_content']['list']['operations']['leaflet_markers'] = [
-    'href'  => 'table=tl_content_map_marker',
-    'icon'  => 'edit.svg',
+// Operation "Marker verwalten" analog zum Contao-Muster für Kind-Datensätze.
+// 'primary' => true holt sie aus dem "..."-Kontextmenü heraus (seit Contao
+// 5.5 landen Operationen sonst standardmäßig dort). Zusätzlich wird sie
+// gezielt VOR die "toggle"-Operation (grünes Auge) einsortiert, statt nur
+// ans Ende der Liste angehängt zu werden - so erscheint sie zwischen
+// Bearbeiten-Stift und Sichtbarkeits-Auge.
+$leafletMarkersOperation = [
+    'href'       => 'table=tl_content_map_marker',
+    'icon'       => 'bundles/datashopmultimarkermap/icons/marker-manage.svg',
     'attributes' => 'onclick="Backend.getScrollOffset()"',
+    'primary'    => true,
 ];
+
+$existingOperations = $GLOBALS['TL_DCA']['tl_content']['list']['operations'] ?? [];
+
+// Seit Contao 5.5 nutzt der Core die Kurzschreibweise (Liste von Namen wie
+// ['edit', 'copy', 'cut', 'delete', 'toggle', 'show'], optional mit '!'-
+// Präfix für "immer sichtbar"), NICHT mehr die alte assoziative Form mit
+// 'toggle' als Array-Schlüssel. Deshalb hier sowohl auf den Wert (Kurzform)
+// als auch den Schlüssel (alte/eigene Form) prüfen.
+$reorderedOperations = [];
+$inserted = false;
+
+foreach ($existingOperations as $operationKey => $operationConfig) {
+    $operationName = is_string($operationConfig) ? ltrim($operationConfig, '!') : $operationKey;
+
+    if (!$inserted && $operationName === 'toggle') {
+        $reorderedOperations['leaflet_markers'] = $leafletMarkersOperation;
+        $inserted = true;
+    }
+
+    $reorderedOperations[$operationKey] = $operationConfig;
+}
+
+if (!$inserted) {
+    $reorderedOperations['leaflet_markers'] = $leafletMarkersOperation;
+}
+
+$GLOBALS['TL_DCA']['tl_content']['list']['operations'] = $reorderedOperations;
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['leafletProvider'] = [
     'inputType' => 'select',
