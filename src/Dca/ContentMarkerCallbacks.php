@@ -4,13 +4,43 @@ declare(strict_types=1);
 
 namespace Datashop\MultiMarkerMap\Dca;
 
+use Contao\Backend;
 use Contao\CoreBundle\Exception\ResponseException;
 use Contao\DataContainer;
 use Contao\Image;
+use Contao\StringUtil;
 use Contao\Widget;
 
 class ContentMarkerCallbacks
 {
+    /**
+     * Rendert den "Marker verwalten"-Button NUR für Content-Elemente vom Typ
+     * "multimarker_map" - list.operations gilt sonst pauschal für ALLE
+     * tl_content-Zeilen (jeden Elementtyp), unabhängig vom "type"-Feld der
+     * einzelnen Zeile. Für andere Zeilen wird ein leerer String
+     * zurückgegeben, wodurch Contao den Button für diese Zeile schlicht
+     * nicht rendert.
+     */
+    public function markersButtonCallback(
+        array $row,
+        string $href,
+        string $label,
+        string $title,
+        string $icon,
+        string $attributes
+    ): string {
+        if (($row['type'] ?? null) !== 'multimarker_map') {
+            return '';
+        }
+
+        return sprintf(
+            '<a href="%s" title="%s"%s>%s</a> ',
+            Backend::addToUrl($href . '&amp;id=' . $row['id']),
+            StringUtil::specialchars($title),
+            $attributes,
+            Image::getHtml($icon, $label)
+        );
+    }
     /**
      * Stellt sicher, dass Lat/Lng gültige Dezimalgrad-Werte sind (z.B. 47.801, -122.4).
      */

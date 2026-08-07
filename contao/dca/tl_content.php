@@ -46,10 +46,13 @@ $GLOBALS['TL_DCA']['tl_content']['config']['onload_callback'][] = static functio
 // ans Ende der Liste angehängt zu werden - so erscheint sie zwischen
 // Bearbeiten-Stift und Sichtbarkeits-Auge.
 $leafletMarkersOperation = [
-    'href'       => 'table=tl_content_map_marker',
-    'icon'       => 'bundles/datashopmultimarkermap/icons/marker-manage.svg',
-    'attributes' => 'onclick="Backend.getScrollOffset()"',
-    'primary'    => true,
+    'href'            => 'table=tl_content_map_marker',
+    'icon'            => 'bundles/datashopmultimarkermap/icons/marker-manage.svg',
+    'attributes'      => 'onclick="Backend.getScrollOffset()"',
+    'primary'         => true,
+    // Nur für Zeilen vom Typ "multimarker_map" rendern, siehe Kommentar
+    // in ContentMarkerCallbacks::markersButtonCallback().
+    'button_callback' => ['Datashop\MultiMarkerMap\Dca\ContentMarkerCallbacks', 'markersButtonCallback'],
 ];
 
 $existingOperations = $GLOBALS['TL_DCA']['tl_content']['list']['operations'] ?? [];
