@@ -71,6 +71,10 @@
         var map = L.map(el, {
             zoomControl: true,
             attributionControl: !hideAttribution,
+            // Mausrad soll die Seite weiterscrollen statt die Karte zu
+            // zoomen - Zoom bleibt über die +/- Buttons oder Doppelklick
+            // weiterhin möglich.
+            scrollWheelZoom: false,
         }).setView([markers[0].lat, markers[0].lng], zoom);
 
         // Leaflet fügt standardmäßig einen eigenen "Leaflet"-Credit-Link voran
@@ -164,6 +168,12 @@
             // Google verbietet laut Nutzungsbedingungen das Entfernen ihres
             // Logos/Copyright-Hinweises - anders als bei OSM gibt es dafür
             // bewusst keine "hideAttribution"-Option.
+            // "cooperative" ist Googles empfohlener Standard für Karten
+            // innerhalb einer scrollbaren Seite: Mausrad scrollt die Seite,
+            // Zoom nur noch mit gedrückter Strg-/Cmd-Taste (mit kurzem
+            // Hinweis-Overlay bei Bedarf). Auf Touch-Geräten bleibt normales
+            // Zwei-Finger-Pinch-Zoom unverändert möglich.
+            gestureHandling: 'cooperative',
         };
 
         if (mapId) {
