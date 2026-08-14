@@ -42,6 +42,31 @@ class ContentMarkerCallbacks
         );
     }
     /**
+     * Stellt sicher, dass eingefügter Text valides JSON ist, bevor es als
+     * MapLibre-Style verwendet wird - sonst bricht die Karte im Frontend
+     * mit einem für Redakteure schwer verständlichen JS-Fehler ab.
+     */
+    public function validateStyleJson(mixed $value, DataContainer $dc): string
+    {
+        $trimmed = trim((string) $value);
+
+        if ($trimmed === '') {
+            return '';
+        }
+
+        json_decode($trimmed, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \RuntimeException(sprintf(
+                'Ungültiges JSON: %s. Bitte den kompletten Inhalt einer style.json einfügen (z.B. Export aus Maputnik).',
+                json_last_error_msg()
+            ));
+        }
+
+        return $trimmed;
+    }
+
+    /**
      * Stellt sicher, dass Lat/Lng gültige Dezimalgrad-Werte sind (z.B. 47.801, -122.4).
      */
     public function validateCoordinate(mixed $value, DataContainer $dc): string

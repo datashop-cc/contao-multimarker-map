@@ -14,9 +14,11 @@ $GLOBALS['TL_DCA']['tl_content']['palettes']['multimarker_map'] =
     . ';{invisible_legend:hide},invisible,start,stop';
 
 // leafletProvider ist ein Selector-Feld: bei "google" werden API-Key und
-// Map-ID über eine Subpalette eingeblendet, sonst bleiben sie versteckt.
+// Map-ID über eine Subpalette eingeblendet, bei "openfreemap" die native
+// Style-Auswahl, sonst bleibt alles versteckt.
 $GLOBALS['TL_DCA']['tl_content']['palettes']['__selector__'][] = 'leafletProvider';
 $GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_google'] = 'leafletGoogleApiKey,leafletGoogleMapId';
+$GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_openfreemap'] = 'leafletOpenFreeMapStyle,leafletOpenFreeMapStyleFile,leafletOpenFreeMapStyleJson';
 
 // Integration mit datashop/contao-cookiebar-bridge (falls installiert): die
 // Bridge hängt ihr "ccbVisibility"-Feld per Schleife an alle *zum
@@ -84,7 +86,7 @@ $GLOBALS['TL_DCA']['tl_content']['list']['operations'] = $reorderedOperations;
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['leafletProvider'] = [
     'inputType' => 'select',
-    'options'   => ['osm', 'google'],
+    'options'   => ['osm', 'openfreemap', 'google'],
     'reference' => &$GLOBALS['TL_LANG']['tl_content']['leafletProviders'],
     'default'   => 'osm',
     'eval'      => ['tl_class' => 'w50', 'submitOnChange' => true],
@@ -101,6 +103,33 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['leafletGoogleMapId'] = [
     'inputType' => 'text',
     'eval'      => ['tl_class' => 'w50'],
     'sql'       => "varchar(64) NOT NULL default ''",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletOpenFreeMapStyle'] = [
+    'inputType' => 'select',
+    'options'   => ['positron', 'bright', 'liberty', 'dark', 'fiord', '3d'],
+    'reference' => &$GLOBALS['TL_LANG']['tl_content']['leafletOpenFreeMapStyles'],
+    'default'   => 'liberty',
+    'eval'      => ['tl_class' => 'w50'],
+    'sql'       => "varchar(16) NOT NULL default 'liberty'",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletOpenFreeMapStyleFile'] = [
+    'inputType' => 'fileTree',
+    'eval'      => ['filesOnly' => true, 'extensions' => 'json', 'fieldType' => 'radio', 'tl_class' => 'clr'],
+    'sql'       => "binary(16) NULL",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletOpenFreeMapStyleJson'] = [
+    'inputType' => 'textarea',
+    // 'rte' bewusst NICHT gesetzt (auch nicht als false) - Contaos eigene
+    // Migration erwartet für dieses Eval-Attribut entweder einen String
+    // (Editor-Name) oder gar keinen Eintrag, kein literales false.
+    'eval'      => ['decodeEntities' => true, 'tl_class' => 'clr', 'rows' => 8],
+    'save_callback' => [
+        ['Datashop\MultiMarkerMap\Dca\ContentMarkerCallbacks', 'validateStyleJson'],
+    ],
+    'sql' => "text NULL",
 ];
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['leafletZoom'] = [

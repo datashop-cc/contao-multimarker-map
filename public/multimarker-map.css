@@ -18,6 +18,19 @@
     filter: var(--multimarker-map-filter, grayscale(60%));
 }
 
+/*
+ * Gleicher Trick für OpenFreeMap/MapLibre: die Karte wird auf ein <canvas>
+ * gerendert, Marker/Popups liegen als separate DOM-Elemente darüber -
+ * Filter trifft also nur die Canvas, Marker bleiben farbig.
+ */
+.multimarker-map--gray .maplibregl-canvas {
+    filter: grayscale(100%) contrast(1.05) brightness(1.02);
+}
+
+.multimarker-map--custom .maplibregl-canvas {
+    filter: var(--multimarker-map-filter, grayscale(60%));
+}
+
 .multimarker-map__pin svg {
     display: block;
 }
@@ -56,5 +69,15 @@
 }
 
 .multimarker-map .leaflet-control-attribution:hover {
+    opacity: 1;
+}
+
+.multimarker-map .maplibregl-ctrl-attrib {
+    background: rgba(255, 255, 255, 0.55);
+    font-size: 9px;
+    opacity: 0.65;
+}
+
+.multimarker-map .maplibregl-ctrl-attrib:hover {
     opacity: 1;
 }

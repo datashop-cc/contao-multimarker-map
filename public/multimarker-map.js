@@ -231,6 +231,100 @@
         }
     }
 
+    // ---------- OpenFreeMap (Vektorkarte via MapLibre GL JS) ----------
+
+    function loadMapLibre(callback) {
+        if (window.maplibregl) {
+            callback();
+            return;
+        }
+
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css';
+        document.head.appendChild(css);
+
+        var script = document.createElement('script');
+        script.src = 'https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js';
+        script.onload = callback;
+        document.head.appendChild(script);
+    }
+
+    function buildMapLibreMarkerElement(hexColor) {
+        var el = document.createElement('div');
+        el.innerHTML = buildPinSvg(hexColor);
+        el.style.width = '30px';
+        el.style.height = '42px';
+        el.style.cursor = 'pointer';
+        return el;
+    }
+
+    function initOpenFreeMapMap(el) {
+        var markers = JSON.parse(el.dataset.markers || '[]');
+        if (!markers.length) {
+            return;
+        }
+
+        var hideAttribution = el.dataset.hideAttribution === '1';
+        var zoom = parseInt(el.dataset.zoom, 10) || 13;
+        var markerColor = el.dataset.markerColor || '#e63946';
+        var style = el.dataset.openfreemapStyle || 'liberty';
+        var styleFileUrl = el.dataset.openfreemapStyleFileUrl || '';
+        var styleJsonRaw = el.dataset.openfreemapStyleJson || '';
+
+        // Priorität: eingefügtes Style-JSON (Text) > hochgeladene Style-Datei
+        // (Dateiverwaltung) > vordefinierter OpenFreeMap-Stil-Name.
+        var mapStyle;
+        if (styleJsonRaw) {
+            try {
+                mapStyle = JSON.parse(styleJsonRaw);
+            } catch (e) {
+                console.warn('MultiMarkerMap: eingefügtes Style-JSON ist ungültig, verwende Standard-Stil.', e);
+                mapStyle = 'https://tiles.openfreemap.org/styles/' + style;
+            }
+        } else if (styleFileUrl) {
+            mapStyle = styleFileUrl;
+        } else {
+            mapStyle = 'https://tiles.openfreemap.org/styles/' + style;
+        }
+
+        var map = new maplibregl.Map({
+            container: el,
+            // Entweder ein Standard-OpenFreeMap-Stil, eine hochgeladene
+            // Style-Datei aus der Dateiverwaltung, oder ein direkt
+            // eingefügtes Style-JSON-Objekt (siehe Prioritätslogik oben).
+            // Alle basieren letztlich auf OpenStreetMap-Daten (ODbL), daher
+            // gilt dieselbe Attributionspflicht wie beim OSM-Provider.
+            style: mapStyle,
+            center: [markers[0].lng, markers[0].lat],
+            zoom: zoom,
+            // Mausrad soll die Seite weiterscrollen statt zu zoomen,
+            // konsistent mit dem Leaflet-Verhalten.
+            scrollZoom: false,
+            attributionControl: !hideAttribution,
+        });
+
+        map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        var bounds = new maplibregl.LngLatBounds();
+
+        markers.forEach(function (m) {
+            var markerEl = buildMapLibreMarkerElement(markerColor);
+            var popup = new maplibregl.Popup({ offset: 25 }).setHTML(buildPopupHtml(m));
+
+            new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
+                .setLngLat([m.lng, m.lat])
+                .setPopup(popup)
+                .addTo(map);
+
+            bounds.extend([m.lng, m.lat]);
+        });
+
+        if (markers.length > 1) {
+            map.fitBounds(bounds, { padding: 40, maxZoom: 16 });
+        }
+    }
+
     // ---------- Init ----------
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -241,10 +335,13 @@
 
         var osmEls = [];
         var googleEls = [];
+        var openFreeMapEls = [];
 
         allMaps.forEach(function (el) {
             if (el.dataset.provider === 'google') {
                 googleEls.push(el);
+            } else if (el.dataset.provider === 'openfreemap') {
+                openFreeMapEls.push(el);
             } else {
                 osmEls.push(el);
             }
@@ -256,10 +353,16 @@
             });
         }
 
+        if (openFreeMapEls.length) {
+            loadMapLibre(function () {
+                openFreeMapEls.forEach(initOpenFreeMapMap);
+            });
+        }
+
         if (googleEls.length) {
             var apiKey = googleEls[0].dataset.googleApiKey;
             if (!apiKey) {
-                console.warn('Leaflet-MultiMap: Kartenanbieter "Google Maps" gewählt, aber kein API-Key hinterlegt.');
+                console.warn('MultiMarkerMap: Kartenanbieter "Google Maps" gewählt, aber kein API-Key hinterlegt.');
                 return;
             }
             loadGoogleMaps(apiKey, function () {

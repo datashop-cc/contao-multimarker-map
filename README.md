@@ -1,9 +1,9 @@
 # datashop/contao-multimarker-map
 
-Contao-5-Content-Element: Karte (OpenStreetMap/Leaflet oder Google Maps) mit
-mehreren Markern, Tooltips und einem Routing-Link, der auf Mobilgeräten die
-installierte Maps-App (Google/Apple Maps) und auf dem Desktop die
-Maps-Website öffnet.
+Contao-5-Content-Element: Karte (OpenStreetMap/Leaflet, OpenFreeMap oder
+Google Maps) mit mehreren Markern, Tooltips und einem Routing-Link, der auf
+Mobilgeräten die installierte Maps-App (Google/Apple Maps) und auf dem
+Desktop die Maps-Website öffnet.
 
 ## Installation
 
@@ -24,21 +24,31 @@ Danach:
 
 ## Konfiguration im Backend
 
+- **Kartenanbieter** – OpenStreetMap (Leaflet), OpenFreeMap (Vektorkarte,
+  kostenlos, kein API-Key) oder Google Maps (kostenpflichtiger API-Key nötig)
 - **Zoomstufe / Kartenhöhe** – Basis-Darstellung
-- **Farbmodus**
-  - *Standard* – Originalfarben der OSM-Kacheln
-  - *Graustufen* – Kartenkacheln grau, Marker bleiben in der gewählten Farbe (CSS-Filter,
-    trifft technisch nur die Tile-Ebene, nicht die Marker-Ebene)
-  - *Benutzerdefiniert* – eigener CSS-Filter über `--multimarker-map-filter` im Theme
+- **Farbmodus** (OSM & OpenFreeMap)
+  - *Standard* – Originalfarben
+  - *Graustufen* – Karte grau, Marker bleiben in der gewählten Farbe
+  - *Benutzerdefiniert* – eigener CSS-Filter über `--multimarker-map-filter`
 - **Markerfarbe** – Hex-Farbe für die Pin-Icons
-- **Copyright-Hinweis ausblenden** – siehe Lizenzhinweis unten
-- **Alternative Tile-URL** – eigener Tile-Server (MapTiler, Mapbox, Stadia, …)
+- **OSM-spezifisch**: Copyright-Hinweis ausblenden, alternative Tile-URL
+- **Google-spezifisch**: API-Key (Pflicht), Map-ID (optional, aktiviert
+  Googles echte Pin-Form in der Markerfarbe über "Advanced Markers")
+- **OpenFreeMap-spezifisch**: Stil-Auswahl (Positron/Bright/Liberty/Dark/
+  Fiord/3D), wahlweise überschreibbar durch eine eigene, in Maputnik
+  (maputnik.github.io/editor) gestaltete Style-Datei aus der Dateiverwaltung
+  oder direkt eingefügtes Style-JSON als Text (Priorität: Text > Datei > Stil-Auswahl)
+- Mausrad-Zoom ist bei allen drei Anbietern deaktiviert, damit die Seite beim
+  Scrollen über der Karte normal weiterscrollt (Zoom weiterhin über Buttons/
+  Pinch-Geste möglich)
 
 ## Wichtiger Lizenzhinweis (OpenStreetMap-Attribution)
 
 OSM-Kartendaten stehen unter der **ODbL-Lizenz**, die eine sichtbare
 Namensnennung ("© OpenStreetMap contributors") vorschreibt – das gilt
-unabhängig vom Tile-Anbieter, auch bei CARTO, Stadia Maps o.ä. in deren
+unabhängig vom Tile-Anbieter (auch bei OpenFreeMap, das ebenfalls auf
+OSM-Daten basiert) und unabhängig von CARTO, Stadia Maps o.ä. in deren
 kostenlosen Tarifen.
 
 Standardmäßig ist die Attribution **dezent gestylt** (klein, halbtransparent,

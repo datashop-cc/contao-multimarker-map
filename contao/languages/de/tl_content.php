@@ -1,16 +1,28 @@
 <?php
 
-$GLOBALS['TL_LANG']['CTE']['multimarker_map'] = ['Karte mit mehreren Markern', 'Zeigt eine interaktive Karte (OpenStreetMap oder Google Maps) mit mehreren Markern, Tooltips und Routing-Link.'];
+$GLOBALS['TL_LANG']['CTE']['multimarker_map'] = ['Karte mit mehreren Markern', 'Zeigt eine interaktive Karte (OpenStreetMap, OpenFreeMap oder Google Maps) mit mehreren Markern, Tooltips und Routing-Link.'];
 
 $GLOBALS['TL_LANG']['tl_content']['leaflet_legend'] = 'Karteneinstellungen';
 $GLOBALS['TL_LANG']['tl_content']['leaflet_markers'] = ['Marker verwalten', 'Die Marker dieser Karte bearbeiten.'];
-$GLOBALS['TL_LANG']['tl_content']['leafletProvider'] = ['Kartenanbieter', 'Welcher Kartendienst verwendet wird. Die Marker bleiben in beiden Fällen identisch.'];
+$GLOBALS['TL_LANG']['tl_content']['leafletProvider'] = ['Kartenanbieter', 'Welcher Kartendienst verwendet wird. Die Marker bleiben in allen Fällen identisch.'];
 $GLOBALS['TL_LANG']['tl_content']['leafletProviders'] = [
-    'osm'    => 'OpenStreetMap (Leaflet, kostenlos)',
-    'google' => 'Google Maps (kostenpflichtiger API-Key nötig)',
+    'osm'         => 'OpenStreetMap (Leaflet, kostenlos)',
+    'openfreemap' => 'OpenFreeMap (Vektorkarte, kostenlos, kein API-Key nötig)',
+    'google'      => 'Google Maps (kostenpflichtiger API-Key nötig)',
 ];
 $GLOBALS['TL_LANG']['tl_content']['leafletGoogleApiKey'] = ['Google Maps API-Key', 'Erforderlich bei Kartenanbieter "Google Maps" - siehe Google Cloud Console (Billing muss aktiviert sein). Achtung: Google-Logo/Copyright-Hinweis darf laut Nutzungsbedingungen nicht ausgeblendet werden.'];
 $GLOBALS['TL_LANG']['tl_content']['leafletGoogleMapId'] = ['Google Maps Map-ID', 'Optional. Nur mit gesetzter Map-ID werden Googles echte Pin-Marker (statt unserem eigenen SVG-Icon) in der Markerfarbe verwendet ("Advanced Markers"). Map-ID kostenlos anlegbar in der Google Cloud Console unter "Map Management".'];
+$GLOBALS['TL_LANG']['tl_content']['leafletOpenFreeMapStyle'] = ['OpenFreeMap-Stil', 'Native Kartenoptik. Lässt sich zusätzlich mit dem Farbmodus (z.B. Graustufen) weiter unten kombinieren. Wird ignoriert, falls unten eine Style-Datei oder ein eigenes Style-JSON angegeben ist.'];
+$GLOBALS['TL_LANG']['tl_content']['leafletOpenFreeMapStyles'] = [
+    'positron' => 'Positron (hell, dezent)',
+    'bright'   => 'Bright (kräftig, klassisch)',
+    'liberty'  => 'Liberty (Standard, ausgewogen)',
+    'dark'     => 'Dark (dunkles Design)',
+    'fiord'    => 'Fiord (kühl, bläulich)',
+    '3d'       => '3D (mit Gebäude-Extrusion)',
+];
+$GLOBALS['TL_LANG']['tl_content']['leafletOpenFreeMapStyleFile'] = ['Eigene Style-Datei (Dateiverwaltung)', 'Eine in Maputnik (maputnik.github.io/editor) angepasste style.json über die Dateiverwaltung hochladen und hier auswählen. Wird ignoriert, falls unten zusätzlich Style-JSON als Text eingefügt ist.'];
+$GLOBALS['TL_LANG']['tl_content']['leafletOpenFreeMapStyleJson'] = ['Eigenes Style-JSON (Text)', 'Alternativ: kompletten Inhalt einer style.json (z.B. Export aus Maputnik) hier direkt einfügen. Hat Vorrang vor Datei-Auswahl und Stil-Auswahl oben.'];
 
 $GLOBALS['TL_LANG']['tl_content']['leafletZoom'] = ['Zoomstufe', 'Anfängliche Zoomstufe der Karte (1-19).'];
 $GLOBALS['TL_LANG']['tl_content']['leafletHeight'] = ['Kartenhöhe', 'z.B. 450px oder 60vh.'];

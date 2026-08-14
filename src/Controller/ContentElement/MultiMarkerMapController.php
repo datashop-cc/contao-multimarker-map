@@ -7,6 +7,8 @@ namespace Datashop\MultiMarkerMap\Controller\ContentElement;
 use Contao\ContentModel;
 use Contao\CoreBundle\Controller\ContentElement\AbstractContentElementController;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsContentElement;
+use Contao\Environment;
+use Contao\FilesModel;
 use Contao\Template;
 use Datashop\MultiMarkerMap\Model\MapMarkerModel;
 use Symfony\Component\HttpFoundation\Request;
@@ -50,6 +52,23 @@ class MultiMarkerMapController extends AbstractContentElementController
         $template->provider = $model->leafletProvider ?: 'osm';
         $template->googleApiKey = $model->leafletGoogleApiKey ?: '';
         $template->googleMapId = $model->leafletGoogleMapId ?: '';
+        $template->openFreeMapStyle = $model->leafletOpenFreeMapStyle ?: 'liberty';
+
+        // Priorität: eingefügtes Style-JSON (Text) > hochgeladene Style-Datei
+        // (Dateiverwaltung) > vordefinierter Stil-Name oben.
+        $openFreeMapStyleJson = trim((string) ($model->leafletOpenFreeMapStyleJson ?? ''));
+        $openFreeMapStyleFileUrl = '';
+
+        if ($openFreeMapStyleJson === '' && $model->leafletOpenFreeMapStyleFile) {
+            $filesModel = FilesModel::findByUuid($model->leafletOpenFreeMapStyleFile);
+
+            if ($filesModel !== null) {
+                $openFreeMapStyleFileUrl = Environment::get('base') . $filesModel->path;
+            }
+        }
+
+        $template->openFreeMapStyleJson = $openFreeMapStyleJson;
+        $template->openFreeMapStyleFileUrl = $openFreeMapStyleFileUrl;
         $template->colorMode = $model->leafletColorMode ?: 'gray';
         $template->zoom = (int) ($model->leafletZoom ?: 13);
         $template->height = $model->leafletHeight ?: '450px';

@@ -1,8 +1,8 @@
 {
     "name": "datashop/contao-multimarker-map",
     "type": "contao-bundle",
-    "description": "Contao Content Element: Karte (OpenStreetMap/Leaflet oder Google Maps) mit mehreren Markern, Tooltips und Routing-Link zu Google/Apple Maps",
-    "keywords": ["contao", "leaflet", "openstreetmap", "google-maps", "content-element", "map"],
+    "description": "Contao Content Element: Karte (OpenStreetMap/Leaflet, OpenFreeMap oder Google Maps) mit mehreren Markern, Tooltips und Routing-Link zu Google/Apple Maps",
+    "keywords": ["contao", "leaflet", "openstreetmap", "openfreemap", "maplibre", "google-maps", "content-element", "map"],
     "homepage": "https://github.com/datashop-cc/contao-multimarker-map",
     "license": "MIT",
     "authors": [
