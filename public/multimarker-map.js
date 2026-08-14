@@ -272,6 +272,14 @@
         var styleFileUrl = el.dataset.openfreemapStyleFileUrl || '';
         var styleJsonRaw = el.dataset.openfreemapStyleJson || '';
 
+        // "3D" ist bei OpenFreeMap kein eigener Style unter einer festen URL,
+        // sondern eine Technik: ein normaler Basis-Style (hier "bright") wird
+        // um eine Gebäude-Extrusions-Ebene aus der separaten "planet"-
+        // Vektorquelle ergänzt, kombiniert mit gekippter Kameraperspektive
+        // (pitch/bearing). Siehe MapLibre-Beispiel "Display buildings in 3D".
+        var use3dBuildings = style === '3d' && !styleJsonRaw && !styleFileUrl;
+        var effectiveStyleSlug = use3dBuildings ? 'bright' : style;
+
         // Priorität: eingefügtes Style-JSON (Text) > hochgeladene Style-Datei
         // (Dateiverwaltung) > vordefinierter OpenFreeMap-Stil-Name.
         var mapStyle;
@@ -280,15 +288,15 @@
                 mapStyle = JSON.parse(styleJsonRaw);
             } catch (e) {
                 console.warn('MultiMarkerMap: eingefügtes Style-JSON ist ungültig, verwende Standard-Stil.', e);
-                mapStyle = 'https://tiles.openfreemap.org/styles/' + style;
+                mapStyle = 'https://tiles.openfreemap.org/styles/' + effectiveStyleSlug;
             }
         } else if (styleFileUrl) {
             mapStyle = styleFileUrl;
         } else {
-            mapStyle = 'https://tiles.openfreemap.org/styles/' + style;
+            mapStyle = 'https://tiles.openfreemap.org/styles/' + effectiveStyleSlug;
         }
 
-        var map = new maplibregl.Map({
+        var mapOptions = {
             container: el,
             // Entweder ein Standard-OpenFreeMap-Stil, eine hochgeladene
             // Style-Datei aus der Dateiverwaltung, oder ein direkt
@@ -302,7 +310,47 @@
             // konsistent mit dem Leaflet-Verhalten.
             scrollZoom: false,
             attributionControl: !hideAttribution,
-        });
+        };
+
+        if (use3dBuildings) {
+            mapOptions.pitch = 45;
+            mapOptions.bearing = -17.6;
+        }
+
+        var map = new maplibregl.Map(mapOptions);
+
+        if (use3dBuildings) {
+            map.on('load', function () {
+                var labelLayerId;
+                var layers = map.getStyle().layers;
+
+                for (var i = 0; i < layers.length; i++) {
+                    if (layers[i].type === 'symbol' && layers[i].layout && layers[i].layout['text-field']) {
+                        labelLayerId = layers[i].id;
+                        break;
+                    }
+                }
+
+                map.addSource('multimarker-map-3d-buildings', {
+                    type: 'vector',
+                    url: 'https://tiles.openfreemap.org/planet',
+                });
+
+                map.addLayer({
+                    id: 'multimarker-map-3d-buildings',
+                    source: 'multimarker-map-3d-buildings',
+                    'source-layer': 'building',
+                    type: 'fill-extrusion',
+                    minzoom: 14,
+                    paint: {
+                        'fill-extrusion-color': '#aaa',
+                        'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 5],
+                        'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+                        'fill-extrusion-opacity': 0.85,
+                    },
+                }, labelLayerId);
+            });
+        }
 
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
