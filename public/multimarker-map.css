@@ -1,6 +1,7 @@
 .multimarker-map {
     width: 100%;
     background: #eee;
+    position: relative;
 }
 
 /*
@@ -79,5 +80,34 @@
 }
 
 .multimarker-map .maplibregl-ctrl-attrib:hover {
+    opacity: 1;
+}
+
+/*
+ * Kurzer Hinweis-Overlay bei Ein-Finger-Berührung auf Touch-Geräten, analog
+ * zu Googles/MapLibres eingebautem "Use two fingers"-Hinweis. Wird nur noch
+ * von Leaflet/OSM genutzt (enableTwoFingerPanning() in multimarker-map.js) -
+ * OpenFreeMap/MapLibre zeigt seit der Umstellung auf die native
+ * "cooperativeGestures"-Option seinen EIGENEN, internen Hinweis-Overlay und
+ * erzeugt dieses Element gar nicht mehr.
+ */
+.multimarker-map__gesture-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+}
+
+.multimarker-map__gesture-hint.is-visible {
     opacity: 1;
 }

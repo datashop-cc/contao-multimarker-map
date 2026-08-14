@@ -17,6 +17,24 @@
             '</svg>';
     }
 
+    /**
+     * Übersetzt MapLibres eingebaute "Cooperative Gestures"-Hinweistexte
+     * (Strg+Scrollen / zwei Finger) je nach Seitensprache. Contao setzt
+     * <html lang="..."> automatisch pro Sprachversion - bei Deutsch wird
+     * eingedeutscht, sonst bleibt MapLibres englischer Standardtext.
+     */
+    function getMapLibreLocale() {
+        var lang = (document.documentElement.lang || '').toLowerCase();
+        if (lang.indexOf('de') !== 0) {
+            return {};
+        }
+        return {
+            'CooperativeGesturesHandler.WindowsHelpText': 'Strg + Scrollen zum Zoomen der Karte verwenden',
+            'CooperativeGesturesHandler.MacHelpText': '⌘ + Scrollen zum Zoomen der Karte verwenden',
+            'CooperativeGesturesHandler.MobileHelpText': 'Mit zwei Fingern die Karte bewegen',
+        };
+    }
+
     function buildPopupHtml(m) {
         var html = '<div class="multimarker-map__popup"><strong>' + escapeHtml(m.title) + '</strong>';
         if (m.tooltip) {
@@ -24,6 +42,82 @@
         }
         html += '<a href="' + m.routeUrl + '" target="_blank" rel="noopener" class="multimarker-map__route-link">Route berechnen</a></div>';
         return html;
+    }
+
+    /**
+     * Google-Maps-artiges "Cooperative Gesture Handling" für Leaflet und
+     * MapLibre nachgebaut (Google bietet das über die native
+     * gestureHandling-Option bereits automatisch, siehe initGoogleMap):
+     * Ein Finger scrollt die Seite normal weiter, erst zwei Finger bewegen
+     * die Karte. Pinch-Zoom braucht ohnehin immer zwei Finger und bleibt
+     * unangetastet - hier geht es nur ums Verschieben (Pan).
+     *
+     * setDraggingEnabled: Funktion, die dem jeweiligen Kartenobjekt sagt,
+     * ob Verschieben per Ein-Finger-Touch gerade erlaubt ist oder nicht
+     * (Leaflet: map.dragging.enable()/disable(), MapLibre: map.dragPan...).
+     */
+    function enableTwoFingerPanning(el, setDraggingEnabled, extraTouchActionEls) {
+        // Nur auf Touch-Geräten eingreifen - am Desktop mit der Maus bleibt
+        // Verschieben ganz normal per Klick+Ziehen möglich (dort kommen nie
+        // Touch-Events, das Deaktivieren unten würde sonst dauerhaft aktiv
+        // bleiben und die Maus-Bedienung kaputt machen).
+        var isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isTouchDevice) {
+            return;
+        }
+
+        // touch-action muss auf ALLEN Elementen gesetzt werden, die
+        // tatsächlich berührt werden können - bei MapLibre ist das nicht
+        // nur unser Container, sondern zusätzlich die interne <canvas>
+        // (map.getCanvas()), die eine eigene, unabhängige touch-action-
+        // Einstellung mitbringt. Der Browser richtet sich nach dem konkret
+        // berührten Element, nicht nach dem Container.
+        var touchActionTargets = [el].concat(extraTouchActionEls || []);
+        var setTouchAction = function (value) {
+            touchActionTargets.forEach(function (target) {
+                target.style.touchAction = value;
+            });
+        };
+
+        // Startet auf "pan-y", damit ein Finger die Seite scrollen lässt.
+        // Bei zwei Fingern (Pinch) wird unten dynamisch auf "none"
+        // zurückgeschaltet - das ist Leaflets/MapLibres eigener,
+        // unveränderter Standardwert, unter dem Pinch-Zoom schon immer
+        // korrekt nur die Karte betraf. Bliebe "pan-y" dauerhaft aktiv,
+        // würde der Browser den Pinch teils selbst als Seiten-Zoom
+        // interpretieren statt ihn der Bibliothek zu überlassen.
+        setTouchAction('pan-y');
+        setDraggingEnabled(false);
+
+        var hint = document.createElement('div');
+        hint.className = 'multimarker-map__gesture-hint';
+        var lang = (document.documentElement.lang || '').toLowerCase();
+        hint.textContent = lang.indexOf('de') === 0 ? 'Mit zwei Fingern bewegen' : 'Use two fingers to move the map';
+        el.appendChild(hint);
+
+        var hintTimeout;
+        var showHint = function () {
+            hint.classList.add('is-visible');
+            clearTimeout(hintTimeout);
+            hintTimeout = setTimeout(function () {
+                hint.classList.remove('is-visible');
+            }, 1500);
+        };
+
+        el.addEventListener('touchstart', function (e) {
+            var twoFingers = e.touches.length >= 2;
+            setDraggingEnabled(twoFingers);
+            setTouchAction(twoFingers ? 'none' : 'pan-y');
+            if (!twoFingers) {
+                showHint();
+            }
+        }, { passive: true });
+
+        el.addEventListener('touchend', function (e) {
+            var twoFingers = e.touches.length >= 2;
+            setDraggingEnabled(twoFingers);
+            setTouchAction(twoFingers ? 'none' : 'pan-y');
+        }, { passive: true });
     }
 
     // ---------- Leaflet / OpenStreetMap ----------
@@ -94,6 +188,17 @@
                 : '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
             maxZoom: 19,
         }).addTo(map);
+
+        // Auf Touch-Geräten wie bei Google Maps: erst zwei Finger bewegen die
+        // Karte, ein Finger scrollt die Seite normal weiter. Pinch-Zoom
+        // (immer zwei Finger) bleibt davon unberührt.
+        enableTwoFingerPanning(el, function (enabled) {
+            if (enabled) {
+                map.dragging.enable();
+            } else {
+                map.dragging.disable();
+            }
+        });
 
         var bounds = [];
 
@@ -306,10 +411,14 @@
             style: mapStyle,
             center: [markers[0].lng, markers[0].lat],
             zoom: zoom,
-            // Mausrad soll die Seite weiterscrollen statt zu zoomen,
-            // konsistent mit dem Leaflet-Verhalten.
-            scrollZoom: false,
             attributionControl: !hideAttribution,
+            // MapLibres eingebautes Pendant zu Googles gestureHandling:
+            // Desktop braucht Strg/Cmd+Scrollen zum Zoomen, Mobile braucht
+            // zwei Finger zum Verschieben - inkl. eigenem Hinweis-Overlay.
+            // Zuverlässiger als eine eigene touch-action-Lösung, da MapLibre
+            // das intern konsistent selbst verwaltet.
+            cooperativeGestures: true,
+            locale: getMapLibreLocale(),
         };
 
         if (use3dBuildings) {
