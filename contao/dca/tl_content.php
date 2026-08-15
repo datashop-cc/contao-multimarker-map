@@ -7,7 +7,7 @@ use Contao\CoreBundle\DataContainer\PaletteManipulator;
 // Eigene Palette für den neuen Content-Element-Typ
 $GLOBALS['TL_DCA']['tl_content']['palettes']['multimarker_map'] =
     '{type_legend},type,headline'
-    . ';{leaflet_legend},leafletProvider,leafletZoom,leafletHeight,leafletColorMode,leafletMarkerColor,leafletHideAttribution,leafletTileUrl'
+    . ';{leaflet_legend},leafletProvider,leafletZoom,leafletHeight,leafletColorMode,leafletMarkerColor,leafletRouteLinkColor,leafletHideAttribution,leafletTileUrl'
     . ';{template_legend:hide},customTpl'
     . ';{protected_legend:hide},protected'
     . ';{expert_legend:hide},guests,cssID'
@@ -18,7 +18,7 @@ $GLOBALS['TL_DCA']['tl_content']['palettes']['multimarker_map'] =
 // Style-Auswahl, sonst bleibt alles versteckt.
 $GLOBALS['TL_DCA']['tl_content']['palettes']['__selector__'][] = 'leafletProvider';
 $GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_google'] = 'leafletGoogleApiKey,leafletGoogleMapId';
-$GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_openfreemap'] = 'leafletOpenFreeMapStyle,leafletOpenFreeMapStyleFile,leafletOpenFreeMapStyleJson';
+$GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_openfreemap'] = 'leafletOpenFreeMapStyle,leafletOpenFreeMapStyleFile,leafletOpenFreeMapStyleJson,leafletAnimateFit';
 
 // Integration mit datashop/contao-cookiebar-bridge (falls installiert): die
 // Bridge hängt ihr "ccbVisibility"-Feld per Schleife an alle *zum
@@ -156,9 +156,22 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['leafletColorMode'] = [
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['leafletMarkerColor'] = [
     'inputType' => 'text',
-    'default'   => '#e63946',
+    'default'   => 'e63946',
     'eval'      => ['tl_class' => 'w50', 'colorpicker' => true, 'isHexColor' => true, 'decodeEntities' => true],
-    'sql'       => "varchar(7) NOT NULL default '#e63946'",
+    'sql'       => "varchar(7) NOT NULL default 'e63946'",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletRouteLinkColor'] = [
+    'inputType' => 'text',
+    'default'   => '004080',
+    'eval'      => ['tl_class' => 'w50', 'colorpicker' => true, 'isHexColor' => true, 'decodeEntities' => true],
+    'sql'       => "varchar(7) NOT NULL default '004080'",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletAnimateFit'] = [
+    'inputType' => 'checkbox',
+    'eval'      => ['tl_class' => 'w50 m12'],
+    'sql'       => "char(1) NOT NULL default ''",
 ];
 
 $GLOBALS['TL_DCA']['tl_content']['fields']['leafletHideAttribution'] = [

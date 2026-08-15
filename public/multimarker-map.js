@@ -35,12 +35,13 @@
         };
     }
 
-    function buildPopupHtml(m) {
+    function buildPopupHtml(m, linkColor) {
         var html = '<div class="multimarker-map__popup"><strong>' + escapeHtml(m.title) + '</strong>';
         if (m.tooltip) {
             html += '<p>' + m.tooltip + '</p>';
         }
-        html += '<a href="' + m.routeUrl + '" target="_blank" rel="noopener" class="multimarker-map__route-link">Route berechnen</a></div>';
+        var colorStyle = linkColor ? ' style="color:' + linkColor + '"' : '';
+        html += '<a href="' + m.routeUrl + '" target="_blank" rel="noopener" class="multimarker-map__route-link"' + colorStyle + '>Route berechnen</a></div>';
         return html;
     }
 
@@ -161,6 +162,8 @@
         var tileUrl = el.dataset.tileUrl;
         var zoom = parseInt(el.dataset.zoom, 10) || 13;
         var icon = buildLeafletIcon(el.dataset.markerColor || '#e63946');
+        var routeLinkColor = el.dataset.routeLinkColor || '';
+        var animateFit = el.dataset.animateFit === '1';
 
         var map = L.map(el, {
             zoomControl: true,
@@ -204,12 +207,12 @@
 
         markers.forEach(function (m) {
             var marker = L.marker([m.lat, m.lng], { icon: icon, title: m.title }).addTo(map);
-            marker.bindPopup(buildPopupHtml(m));
+            marker.bindPopup(buildPopupHtml(m, routeLinkColor));
             bounds.push([m.lat, m.lng]);
         });
 
         if (bounds.length > 1) {
-            map.fitBounds(bounds, { padding: [40, 40] });
+            map.fitBounds(bounds, { padding: [40, 40], animate: animateFit });
         }
     }
 
@@ -266,6 +269,7 @@
         var colorMode = el.dataset.colorMode;
         var markerColor = el.dataset.markerColor || '#e63946';
         var mapId = el.dataset.googleMapId || '';
+        var routeLinkColor = el.dataset.routeLinkColor || '';
 
         var mapOptions = {
             zoom: zoom,
@@ -326,7 +330,7 @@
             bounds.extend(position);
 
             marker.addListener('click', function () {
-                infoWindow.setContent(buildPopupHtml(m));
+                infoWindow.setContent(buildPopupHtml(m, routeLinkColor));
                 infoWindow.open(map, marker);
             });
         });
@@ -373,6 +377,8 @@
         var hideAttribution = el.dataset.hideAttribution === '1';
         var zoom = parseInt(el.dataset.zoom, 10) || 13;
         var markerColor = el.dataset.markerColor || '#e63946';
+        var routeLinkColor = el.dataset.routeLinkColor || '';
+        var animateFit = el.dataset.animateFit === '1';
         var style = el.dataset.openfreemapStyle || 'liberty';
         var styleFileUrl = el.dataset.openfreemapStyleFileUrl || '';
         var styleJsonRaw = el.dataset.openfreemapStyleJson || '';
@@ -467,7 +473,47 @@
 
         markers.forEach(function (m) {
             var markerEl = buildMapLibreMarkerElement(markerColor);
-            var popup = new maplibregl.Popup({ offset: 25 }).setHTML(buildPopupHtml(m));
+            // 'anchor: bottom' erzwingt, dass das Popup immer OBERHALB des
+            // Markers aufklappt (Spitze zeigt nach unten auf den Marker) -
+            // MapLibre würde sonst je nach verfügbarem Platz automatisch
+            // zwischen oben/unten wechseln, anders als bei Leaflet/Google.
+            // offset: 38 statt der Bibliotheks-üblichen 25px, damit die
+            // Popup-Spitze am OBEREN Rand des 42px hohen Pin-Icons landet
+            // (analog zu Leaflets popupAnchor: [0, -38]) statt mittig auf
+            // Höhe des weißen Punkts im Pin.
+            var popup = new maplibregl.Popup({ offset: 38, anchor: 'bottom' }).setHTML(buildPopupHtml(m, routeLinkColor));
+
+            // MapLibre schiebt die Karte (anders als Leaflet/Google) nicht
+            // automatisch nach, wenn ein Popup am Kartenrand sonst
+            // abgeschnitten würde - das bauen wir hier selbst nach.
+            popup.on('open', function () {
+                requestAnimationFrame(function () {
+                    var popupEl = popup.getElement();
+                    if (!popupEl) {
+                        return;
+                    }
+
+                    var margin = 20;
+                    var containerRect = el.getBoundingClientRect();
+                    var popupRect = popupEl.getBoundingClientRect();
+                    var dx = 0;
+                    var dy = 0;
+
+                    if (popupRect.top < containerRect.top + margin) {
+                        dy = popupRect.top - (containerRect.top + margin);
+                    }
+                    if (popupRect.left < containerRect.left + margin) {
+                        dx = popupRect.left - (containerRect.left + margin);
+                    }
+                    if (popupRect.right > containerRect.right - margin) {
+                        dx = popupRect.right - (containerRect.right - margin);
+                    }
+
+                    if (dx !== 0 || dy !== 0) {
+                        map.panBy([dx, dy], { duration: 300 });
+                    }
+                });
+            });
 
             new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
                 .setLngLat([m.lng, m.lat])
@@ -478,7 +524,10 @@
         });
 
         if (markers.length > 1) {
-            map.fitBounds(bounds, { padding: 40, maxZoom: 16 });
+            // Standardmäßig kein sichtbares Heranzoomen von der
+            // Anfangsposition zur passenden Ansicht (wie bei Leaflet/Google),
+            // per Backend-Option "Zoom-Animation beim Laden" umschaltbar.
+            map.fitBounds(bounds, { padding: 40, maxZoom: 16, animate: animateFit });
         }
     }
 

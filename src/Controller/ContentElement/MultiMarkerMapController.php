@@ -80,6 +80,12 @@ class MultiMarkerMapController extends AbstractContentElementController
         $markerColor = $model->leafletMarkerColor ?: 'e63946';
         $template->markerColor = '#' . ltrim($markerColor, '#');
 
+        // Leer = Markerfarbe auch für den Routing-Link verwenden.
+        $routeLinkColor = trim((string) ($model->leafletRouteLinkColor ?? ''));
+        $template->routeLinkColor = $routeLinkColor !== '' ? '#' . ltrim($routeLinkColor, '#') : $template->markerColor;
+
+        $template->animateFit = (bool) $model->leafletAnimateFit;
+
         return $template->getResponse();
     }
 }

@@ -33,5 +33,7 @@ $GLOBALS['TL_LANG']['tl_content']['leafletColorModes'] = [
     'custom'  => 'Benutzerdefiniert (CSS-Filter im Theme anpassen)',
 ];
 $GLOBALS['TL_LANG']['tl_content']['leafletMarkerColor'] = ['Markerfarbe', 'Farbe der Marker-Icons (Hex-Wert).'];
+$GLOBALS['TL_LANG']['tl_content']['leafletRouteLinkColor'] = ['Link-Farbe ("Route berechnen")', 'Optional. Leer lassen, um die Markerfarbe auch für den Routing-Link im Tooltip zu verwenden.'];
+$GLOBALS['TL_LANG']['tl_content']['leafletAnimateFit'] = ['Zoom-Animation beim Laden', 'Beim ersten Laden sanft zur passenden Ansicht zoomen/schwenken, statt sofort zu springen.'];
 $GLOBALS['TL_LANG']['tl_content']['leafletHideAttribution'] = ['Copyright-Hinweis ausblenden', 'Achtung: Die Namensnennung "© OpenStreetMap contributors" ist bei Nutzung von OSM-Kartendaten lizenzrechtlich vorgeschrieben (ODbL). Nur deaktivieren, wenn ein Tile-Anbieter mit entsprechender Lizenz (z.B. White-Label-Tarif) verwendet wird.'];
 $GLOBALS['TL_LANG']['tl_content']['leafletTileUrl'] = ['Alternative Tile-URL', 'Optional: eigener Tile-Server, z.B. von MapTiler/Mapbox/Stadia. Leer lassen für den öffentlichen OSM-Standardserver.'];

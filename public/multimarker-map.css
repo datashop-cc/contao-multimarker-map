@@ -111,3 +111,20 @@
 .multimarker-map__gesture-hint.is-visible {
     opacity: 1;
 }
+
+/* Schließen-Button im Tooltip doppelt so groß wie Standard. */
+.multimarker-map .leaflet-popup-close-button,
+.multimarker-map .maplibregl-popup-close-button {
+    font-size: 200%;
+}
+
+/* Tooltip-Optik von OpenFreeMap/MapLibre an Leaflet angleichen. */
+.multimarker-map .maplibregl-popup-content {
+    border-radius: 12px;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Blauen Standard-Fokusring des Browsers beim Routing-Link deaktivieren. */
+.multimarker-map__route-link:focus-visible {
+    outline: none;
+}
