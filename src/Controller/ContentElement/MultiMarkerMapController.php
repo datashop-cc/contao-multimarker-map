@@ -48,6 +48,7 @@ class MultiMarkerMapController extends AbstractContentElementController
         }
 
         $template->markersJson = json_encode($markerData, JSON_THROW_ON_ERROR);
+        $template->hasMarkers = count($markerData) > 0;
         $template->mapId = 'leaflet-map-' . $model->id;
         $template->provider = $model->leafletProvider ?: 'osm';
         $template->googleApiKey = $model->leafletGoogleApiKey ?: '';

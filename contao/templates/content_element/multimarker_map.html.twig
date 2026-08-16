@@ -1,6 +1,7 @@
 {% extends "@Contao/content_element/_base.html.twig" %}
 
 {% block content %}
+    {% if hasMarkers %}
     <div
         id="{{ mapId }}"
         class="multimarker-map multimarker-map--{{ colorMode }}"
@@ -20,4 +21,9 @@
         data-openfreemap-style-file-url="{{ openFreeMapStyleFileUrl }}"
         data-openfreemap-style-json="{{ openFreeMapStyleJson }}"
     ></div>
+    {% else %}
+    <div class="multimarker-map-empty" style="height:{{ height }};">
+        <p>Diese Karte hat noch keine Marker.<br>Bitte im Backend über "Marker verwalten" mindestens einen Marker anlegen.</p>
+    </div>
+    {% endif %}
 {% endblock %}

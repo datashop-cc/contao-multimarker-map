@@ -128,3 +128,24 @@
 .multimarker-map__route-link:focus-visible {
     outline: none;
 }
+
+/* Hinweis-Box, wenn noch kein Marker angelegt wurde (statt leerer grauer
+ * Fläche). Bewusst NICHT die Klasse "multimarker-map" - sonst würde das JS
+ * unnötig Leaflet/MapLibre nachladen, obwohl keine Karte gerendert wird. */
+.multimarker-map-empty {
+    width: 100%;
+    background: #f4f4f4;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #666;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.multimarker-map-empty p {
+    margin: 0;
+}
