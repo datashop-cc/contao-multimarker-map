@@ -9,12 +9,66 @@
         return div.innerHTML;
     }
 
+    /*
+     * Abmessungen des Pin-Icons inkl. 1px Rand rundherum für die Kontur.
+     * Die Pin-Form selbst ist 30x42 groß; die Kontur (stroke-width 1) liegt
+     * aber MITTIG auf dem Pfad, ragt also 0.5px nach außen. Mit einer exakt
+     * 30x42 großen viewBox wurde diese äußere Hälfte vom SVG-Viewport
+     * (overflow: hidden) abgeschnitten -> Rand links/rechts/oben und an der
+     * Spitze sichtbar dünner bzw. angeschnitten. Daher viewBox um 1px
+     * erweitert und Spitze per stroke-linejoin="round" nicht spitz verlängert.
+     */
+    var PIN_WIDTH = 32;
+    var PIN_HEIGHT = 44;
+    // Position der Pin-Spitze im Icon (= Ankerpunkt auf der Koordinate).
+    var PIN_TIP_X = 16;
+    var PIN_TIP_Y = 43;
+
+    // Abstand, den die Marker-GRAFIK beim automatischen Einpassen mehrerer
+    // Marker (fitBounds) mindestens zum Kartenrand haben soll.
+    var FIT_MARGIN = 40;
+
     function buildPinSvg(hexColor) {
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="42" viewBox="0 0 30 42">' +
-            '<path fill="' + hexColor + '" stroke="#1a1a1a" stroke-width="1" ' +
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' + PIN_WIDTH + '" height="' + PIN_HEIGHT + '" viewBox="-1 -1 32 44">' +
+            '<path fill="' + hexColor + '" stroke="#1a1a1a" stroke-width="1" stroke-linejoin="round" ' +
             'd="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 27 15 27s15-16.5 15-27C30 6.7 23.3 0 15 0z"/>' +
             '<circle cx="15" cy="15" r="6" fill="#fff"/>' +
             '</svg>';
+    }
+
+    /**
+     * Padding für fitBounds: Die Bounds bestehen nur aus den Marker-
+     * KOORDINATEN, also den Pin-Spitzen. Der Pin ragt aber PIN_HEIGHT px
+     * nach oben (und halbe Breite zur Seite) über seine Koordinate hinaus.
+     * Ein symmetrisches Padding reicht daher oben nicht aus - der oberste
+     * Marker wurde am Kartenrand abgeschnitten (bei Google ganz ohne
+     * Padding sogar komplett bis auf die Spitze). Deshalb oben die volle
+     * Pin-Höhe und seitlich die halbe Pin-Breite zusätzlich einrechnen.
+     *
+     * Bei sehr kleinen Karten wird das Padding proportional reduziert, da
+     * Leaflet/MapLibre/Google bei Padding größer als die Karte sonst falsch
+     * bzw. gar nicht zoomen.
+     */
+    function getFitPadding(el) {
+        var padding = {
+            top: FIT_MARGIN + PIN_HEIGHT,
+            right: FIT_MARGIN + PIN_WIDTH / 2,
+            bottom: FIT_MARGIN,
+            left: FIT_MARGIN + PIN_WIDTH / 2,
+        };
+
+        var maxShare = 0.6;
+        var height = el.clientHeight;
+        var width = el.clientWidth;
+        var vScale = height ? Math.min(1, (height * maxShare) / (padding.top + padding.bottom)) : 1;
+        var hScale = width ? Math.min(1, (width * maxShare) / (padding.left + padding.right)) : 1;
+
+        return {
+            top: Math.round(padding.top * vScale),
+            right: Math.round(padding.right * hScale),
+            bottom: Math.round(padding.bottom * vScale),
+            left: Math.round(padding.left * hScale),
+        };
     }
 
     /**
@@ -146,8 +200,8 @@
         return L.divIcon({
             className: 'multimarker-map__pin',
             html: buildPinSvg(hexColor),
-            iconSize: [30, 42],
-            iconAnchor: [15, 42],
+            iconSize: [PIN_WIDTH, PIN_HEIGHT],
+            iconAnchor: [PIN_TIP_X, PIN_TIP_Y],
             popupAnchor: [0, -38],
         });
     }
@@ -212,7 +266,12 @@
         });
 
         if (bounds.length > 1) {
-            map.fitBounds(bounds, { padding: [40, 40], animate: animateFit });
+            var fitPadding = getFitPadding(el);
+            map.fitBounds(bounds, {
+                paddingTopLeft: [fitPadding.left, fitPadding.top],
+                paddingBottomRight: [fitPadding.right, fitPadding.bottom],
+                animate: animateFit,
+            });
         }
     }
 
@@ -245,8 +304,8 @@
     function buildGoogleIcon(hexColor) {
         return {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(buildPinSvg(hexColor)),
-            scaledSize: new google.maps.Size(30, 42),
-            anchor: new google.maps.Point(15, 42),
+            scaledSize: new google.maps.Size(PIN_WIDTH, PIN_HEIGHT),
+            anchor: new google.maps.Point(PIN_TIP_X, PIN_TIP_Y),
         };
     }
 
@@ -336,7 +395,7 @@
         });
 
         if (markers.length > 1) {
-            map.fitBounds(bounds);
+            map.fitBounds(bounds, getFitPadding(el));
         }
     }
 
@@ -361,9 +420,10 @@
 
     function buildMapLibreMarkerElement(hexColor) {
         var el = document.createElement('div');
+        el.className = 'multimarker-map__pin';
         el.innerHTML = buildPinSvg(hexColor);
-        el.style.width = '30px';
-        el.style.height = '42px';
+        el.style.width = PIN_WIDTH + 'px';
+        el.style.height = PIN_HEIGHT + 'px';
         el.style.cursor = 'pointer';
         return el;
     }
@@ -515,7 +575,10 @@
                 });
             });
 
-            new maplibregl.Marker({ element: markerEl, anchor: 'bottom' })
+            // offset: Pin-Spitze sitzt 1px über der Unterkante des Icons
+            // (Platz für die Kontur), daher 1px nach unten verschieben, damit
+            // die Spitze exakt auf der Koordinate liegt (wie bei Leaflet/Google).
+            new maplibregl.Marker({ element: markerEl, anchor: 'bottom', offset: [0, PIN_HEIGHT - PIN_TIP_Y] })
                 .setLngLat([m.lng, m.lat])
                 .setPopup(popup)
                 .addTo(map);
@@ -527,7 +590,7 @@
             // Standardmäßig kein sichtbares Heranzoomen von der
             // Anfangsposition zur passenden Ansicht (wie bei Leaflet/Google),
             // per Backend-Option "Zoom-Animation beim Laden" umschaltbar.
-            map.fitBounds(bounds, { padding: 40, maxZoom: 16, animate: animateFit });
+            map.fitBounds(bounds, { padding: getFitPadding(el), maxZoom: 16, animate: animateFit });
         }
     }
 
