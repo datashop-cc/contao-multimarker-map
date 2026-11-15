@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0
+
+- **Leaflet und MapLibre lokal mitgeliefert** statt von unpkg.com geladen:
+  Leaflet 1.9.4 (BSD-2-Clause) unter `public/vendor/leaflet/`, MapLibre GL JS
+  4.7.1 (BSD-3-Clause) unter `public/vendor/maplibre-gl/`. Besucher-IPs gehen
+  nicht mehr an ein CDN (DSGVO), und ein CDN-Ausfall legt die Karte nicht
+  mehr lahm.
+- **Frontend-Texte übersetzbar**: "Route berechnen", die Gesten-Hinweise,
+  der Gruppen-Titel und der Hinweis bei Karten ohne Marker kommen jetzt aus
+  den Contao-Sprachdateien (`MSC.multimarker_map`) und folgen der Sprache
+  der Seite (Deutsch und Englisch enthalten).
+- Englische Backend-Übersetzungen für alle Felder und Marker-Operationen
+  vervollständigt.
+
 ## 1.2.1
 
 - Neu: **Marker gruppieren** (Clustering) für alle drei Kartenanbieter

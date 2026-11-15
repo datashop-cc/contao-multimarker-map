@@ -20,6 +20,8 @@
         data-openfreemap-style="{{ openFreeMapStyle }}"
         data-openfreemap-style-file-url="{{ openFreeMapStyleFileUrl }}"
         data-openfreemap-style-json="{{ openFreeMapStyleJson }}"
+        data-vendor-base="{{ vendorBase }}"
+        data-labels="{{ labelsJson }}"
         {% if clusterEnabled %}
         data-cluster="1"
         data-cluster-max-zoom="{{ clusterMaxZoom }}"
@@ -30,7 +32,7 @@
     ></div>
     {% else %}
     <div class="multimarker-map-empty" style="height:{{ height }};">
-        <p>Diese Karte hat noch keine Marker.<br>Bitte im Backend über "Marker verwalten" mindestens einen Marker anlegen.</p>
+        <p>{{ emptyHint|nl2br }}</p>
     </div>
     {% endif %}
 {% endblock %}

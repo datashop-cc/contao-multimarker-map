@@ -111,9 +111,32 @@ class MultiMarkerMapController extends AbstractContentElementController
         // Pfad zur Bibliothek explizit übergeben statt im JS aus der eigenen
         // Script-URL abzuleiten: Contao fasst "|static"-Skripte ggf. zu einer
         // Datei unter assets/js/ zusammen, dann stimmt der relative Pfad nicht.
-        $template->clusterScript = $request->getBasePath() . '/bundles/datashopmultimarkermap/vendor/supercluster/supercluster.min.js';
+        $vendorBase = $request->getBasePath() . '/bundles/datashopmultimarkermap/vendor/';
+        $template->clusterScript = $vendorBase . 'supercluster/supercluster.min.js';
+
+        // Leaflet und MapLibre liegen ebenfalls lokal unter vendor/ (kein CDN,
+        // keine Besucher-IP an Dritte). Aus demselben Grund wie oben als
+        // fester Pfad übergeben.
+        $template->vendorBase = $vendorBase;
+
+        // Frontend-Texte aus den Sprachdateien (contao/languages/*/default.php)
+        // in der Sprache der aktuellen Seite; das JS liest sie aus data-labels.
+        $template->labelsJson = json_encode([
+            'route' => $this->translate('route'),
+            'gestureHint' => $this->translate('gestureHint'),
+            'gestureWindows' => $this->translate('gestureWindows'),
+            'gestureMac' => $this->translate('gestureMac'),
+            'gestureMobile' => $this->translate('gestureMobile'),
+            'clusterTitle' => $this->translate('clusterTitle'),
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        $template->emptyHint = $this->translate('emptyHint');
 
         return $template->getResponse();
+    }
+
+    private function translate(string $key): string
+    {
+        return System::getContainer()->get('translator')->trans('MSC.multimarker_map.' . $key, [], 'contao_default');
     }
 
     private function isPreviewMode(): bool

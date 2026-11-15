@@ -132,11 +132,18 @@ Ausblenden-Option.
   `multimarker-map.js`), keine Bild-Assets nötig. Bei Google Maps mit
   gesetzter Map-ID wird stattdessen Googles native Pin-Form über die
   "Advanced Markers"-API in der Markerfarbe verwendet.
-- Leaflet bzw. MapLibre GL JS werden jeweils per CDN (unpkg) dynamisch
-  nachgeladen, nur wenn tatsächlich eine passende `.multimarker-map`-Instanz
-  (OSM bzw. OpenFreeMap) auf der Seite ist. Für Projekte ohne externe
-  CDN-Zugriffe: `multimarker-map.js` anpassen und die jeweilige Bibliothek
-  stattdessen lokal einbinden.
+- Leaflet 1.9.4 (BSD-2-Clause) und MapLibre GL JS 4.7.1 (BSD-3-Clause)
+  werden lokal unter `public/vendor/` mitgeliefert, kein CDN. Besucher-IPs
+  gehen dadurch nicht an Dritte (DSGVO). Die Bibliotheken werden dynamisch
+  nur nachgeladen, wenn tatsächlich eine passende `.multimarker-map`-Instanz
+  (OSM bzw. OpenFreeMap) auf der Seite ist. Kartenkacheln, Styles und
+  Google Maps kommen weiterhin vom jeweiligen Kartenanbieter.
+- Frontend-Texte ("Route berechnen", Gesten-Hinweise, Gruppen-Titel) stehen
+  in `contao/languages/<sprache>/default.php` unter
+  `$GLOBALS['TL_LANG']['MSC']['multimarker_map']` und richten sich nach der
+  Sprache der Seite. Eigene Texte lassen sich wie gewohnt in
+  `contao/languages/<sprache>/default.php` der eigenen Installation
+  überschreiben.
 - Der Routing-Link nutzt Googles Universal-URL-Schema
   (`https://www.google.com/maps/dir/?api=1&destination=lat,lng`), das auf
   iOS/Android automatisch die installierte Maps-App öffnet und im

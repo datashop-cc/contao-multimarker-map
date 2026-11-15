@@ -71,21 +71,51 @@
         };
     }
 
+    /*
+     * Frontend-Texte kommen aus den Contao-Sprachdateien
+     * (contao/languages/<sprache>/default.php, $GLOBALS['TL_LANG']['MSC'])
+     * und werden vom Controller als JSON in data-labels übergeben. Die Werte
+     * hier sind nur der Fallback, falls das Attribut fehlt (z.B. bei einem
+     * angepassten, älteren Template).
+     */
+    var LABELS = {
+        route: 'Get directions',
+        gestureHint: 'Use two fingers to move the map',
+        gestureWindows: 'Use Ctrl + scroll to zoom the map',
+        gestureMac: 'Use ⌘ + scroll to zoom the map',
+        gestureMobile: 'Use two fingers to move the map',
+        clusterTitle: '%count% markers',
+    };
+
+    function setLabels(json) {
+        if (!json) {
+            return;
+        }
+        try {
+            var parsed = JSON.parse(json);
+            Object.keys(parsed).forEach(function (key) {
+                if (parsed[key]) {
+                    LABELS[key] = parsed[key];
+                }
+            });
+        } catch (e) {
+            console.warn('MultiMarkerMap: data-labels ist kein gültiges JSON.', e);
+        }
+    }
+
+    function getClusterTitle(count) {
+        return LABELS.clusterTitle.replace('%count%', formatClusterCount(count));
+    }
+
     /**
      * Übersetzt MapLibres eingebaute "Cooperative Gestures"-Hinweistexte
-     * (Strg+Scrollen / zwei Finger) je nach Seitensprache. Contao setzt
-     * <html lang="..."> automatisch pro Sprachversion - bei Deutsch wird
-     * eingedeutscht, sonst bleibt MapLibres englischer Standardtext.
+     * (Strg+Scrollen / zwei Finger) mit den Texten aus der Sprachdatei.
      */
     function getMapLibreLocale() {
-        var lang = (document.documentElement.lang || '').toLowerCase();
-        if (lang.indexOf('de') !== 0) {
-            return {};
-        }
         return {
-            'CooperativeGesturesHandler.WindowsHelpText': 'Strg + Scrollen zum Zoomen der Karte verwenden',
-            'CooperativeGesturesHandler.MacHelpText': '⌘ + Scrollen zum Zoomen der Karte verwenden',
-            'CooperativeGesturesHandler.MobileHelpText': 'Mit zwei Fingern die Karte bewegen',
+            'CooperativeGesturesHandler.WindowsHelpText': LABELS.gestureWindows,
+            'CooperativeGesturesHandler.MacHelpText': LABELS.gestureMac,
+            'CooperativeGesturesHandler.MobileHelpText': LABELS.gestureMobile,
         };
     }
 
@@ -95,7 +125,7 @@
             html += '<p>' + m.tooltip + '</p>';
         }
         var colorStyle = linkColor ? ' style="color:' + linkColor + '"' : '';
-        html += '<a href="' + m.routeUrl + '" target="_blank" rel="noopener" class="multimarker-map__route-link"' + colorStyle + '>Route berechnen</a>';
+        html += '<a href="' + m.routeUrl + '" target="_blank" rel="noopener" class="multimarker-map__route-link"' + colorStyle + '>' + escapeHtml(LABELS.route) + '</a>';
         return html;
     }
 
@@ -242,7 +272,7 @@
         el.style.height = size + 'px';
         el.innerHTML = buildClusterSvg(count, hexColor);
         el.setAttribute('role', 'button');
-        el.setAttribute('title', formatClusterCount(count) + ' Marker');
+        el.setAttribute('title', getClusterTitle(count));
         return el;
     }
 
@@ -432,8 +462,7 @@
 
         var hint = document.createElement('div');
         hint.className = 'multimarker-map__gesture-hint';
-        var lang = (document.documentElement.lang || '').toLowerCase();
-        hint.textContent = lang.indexOf('de') === 0 ? 'Mit zwei Fingern bewegen' : 'Use two fingers to move the map';
+        hint.textContent = LABELS.gestureHint;
         el.appendChild(hint);
 
         var hintTimeout;
@@ -463,21 +492,33 @@
 
     // ---------- Leaflet / OpenStreetMap ----------
 
-    function loadLeaflet(callback) {
+    /*
+     * Leaflet und MapLibre werden lokal aus public/vendor/ mitgeliefert
+     * (kein CDN): so geht keine Besucher-IP an Dritte (DSGVO), und die Karte
+     * hängt nicht von der Verfügbarkeit eines CDNs ab. vendorBase kommt vom
+     * Controller (data-vendor-base), siehe dort zum Grund.
+     */
+    function loadLibrary(cssHref, scriptSrc, callback) {
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = cssHref;
+        document.head.appendChild(css);
+
+        var script = document.createElement('script');
+        script.src = scriptSrc;
+        script.onload = callback;
+        script.onerror = function () {
+            console.warn('MultiMarkerMap: Kartenbibliothek konnte nicht geladen werden: ' + scriptSrc);
+        };
+        document.head.appendChild(script);
+    }
+
+    function loadLeaflet(vendorBase, callback) {
         if (window.L) {
             callback();
             return;
         }
-
-        var css = document.createElement('link');
-        css.rel = 'stylesheet';
-        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(css);
-
-        var script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.onload = callback;
-        document.head.appendChild(script);
+        loadLibrary(vendorBase + 'leaflet/leaflet.css', vendorBase + 'leaflet/leaflet.js', callback);
     }
 
     function buildLeafletIcon(hexColor) {
@@ -580,7 +621,7 @@
                             iconSize: [size, size],
                             iconAnchor: [size / 2, size / 2],
                         }),
-                        title: formatClusterCount(count) + ' Marker',
+                        title: getClusterTitle(count),
                         // Gruppen über einzelnen Pins, größere Gruppen oben.
                         zIndexOffset: 1000 + count,
                     });
@@ -786,7 +827,7 @@
                 createPoint: createPoint,
                 createCluster: function (lat, lng, count, onClick) {
                     var size = getClusterSize(count);
-                    var title = formatClusterCount(count) + ' Marker';
+                    var title = getClusterTitle(count);
                     var marker;
 
                     if (useAdvancedMarkers) {
@@ -844,21 +885,12 @@
 
     // ---------- OpenFreeMap (Vektorkarte via MapLibre GL JS) ----------
 
-    function loadMapLibre(callback) {
+    function loadMapLibre(vendorBase, callback) {
         if (window.maplibregl) {
             callback();
             return;
         }
-
-        var css = document.createElement('link');
-        css.rel = 'stylesheet';
-        css.href = 'https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css';
-        document.head.appendChild(css);
-
-        var script = document.createElement('script');
-        script.src = 'https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js';
-        script.onload = callback;
-        document.head.appendChild(script);
+        loadLibrary(vendorBase + 'maplibre-gl/maplibre-gl.css', vendorBase + 'maplibre-gl/maplibre-gl.js', callback);
     }
 
     function buildMapLibreMarkerElement(hexColor) {
@@ -1105,6 +1137,10 @@
             return;
         }
 
+        // Sprache und Bibliothekspfad sind für alle Karten einer Seite gleich.
+        setLabels(allMaps[0].dataset.labels);
+        var vendorBase = allMaps[0].dataset.vendorBase || 'bundles/datashopmultimarkermap/vendor/';
+
         var osmEls = [];
         var googleEls = [];
         var openFreeMapEls = [];
@@ -1120,7 +1156,7 @@
         });
 
         if (osmEls.length) {
-            loadLeaflet(function () {
+            loadLeaflet(vendorBase, function () {
                 osmEls.forEach(function (el) {
                     withClusterLibrary(el, initLeafletMap);
                 });
@@ -1128,7 +1164,7 @@
         }
 
         if (openFreeMapEls.length) {
-            loadMapLibre(function () {
+            loadMapLibre(vendorBase, function () {
                 openFreeMapEls.forEach(function (el) {
                     withClusterLibrary(el, initOpenFreeMapMap);
                 });
