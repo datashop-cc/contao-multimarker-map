@@ -52,10 +52,13 @@ $GLOBALS['TL_DCA']['tl_content_map_marker'] = [
                 'primary' => true,
             ],
             'copy'   => ['href' => 'act=copy', 'icon' => 'copy.svg'],
+            // Rückfrage mit Contaos eigenem Text (gleiches Muster wie im
+            // Core, z.B. tl_form_field). Vorher stand hier confirm('') und
+            // der Dialog war leer.
             'delete' => [
                 'href'       => 'act=delete',
                 'icon'       => 'delete.svg',
-                'attributes' => 'onclick="if(!confirm(\'' . '\'))return false;Backend.getScrollOffset()"',
+                'attributes' => 'onclick="if(!confirm(\'' . ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? null) . '\'))return false;Backend.getScrollOffset()"',
                 'primary'    => true,
             ],
             'toggle' => [

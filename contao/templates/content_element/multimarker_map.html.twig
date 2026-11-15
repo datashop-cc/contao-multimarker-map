@@ -20,6 +20,13 @@
         data-openfreemap-style="{{ openFreeMapStyle }}"
         data-openfreemap-style-file-url="{{ openFreeMapStyleFileUrl }}"
         data-openfreemap-style-json="{{ openFreeMapStyleJson }}"
+        {% if clusterEnabled %}
+        data-cluster="1"
+        data-cluster-max-zoom="{{ clusterMaxZoom }}"
+        data-cluster-radius="{{ clusterRadius }}"
+        data-cluster-color="{{ clusterColor }}"
+        data-cluster-script="{{ clusterScript }}"
+        {% endif %}
     ></div>
     {% else %}
     <div class="multimarker-map-empty" style="height:{{ height }};">

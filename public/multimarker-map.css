@@ -149,3 +149,51 @@
 .multimarker-map-empty p {
     margin: 0;
 }
+
+/*
+ * Marker gruppieren: Kreis mit Anzahl (SVG aus buildClusterSvg() in
+ * multimarker-map.js). Die Farbe kommt aus dem Backend ("Gruppen-Farbe"),
+ * hier nur Schatten, Cursor und ein leichter Hover-Effekt.
+ */
+.multimarker-map__cluster {
+    cursor: pointer;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+}
+
+.multimarker-map__cluster svg {
+    display: block;
+}
+
+/* Leaflet und MapLibre positionieren das äußere Element per transform -
+ * daher Übergang und Hover-Zoom nur auf das innere SVG anwenden. */
+.multimarker-map__cluster svg {
+    transition: transform 0.15s ease;
+}
+
+.multimarker-map__cluster:hover svg {
+    transform: scale(1.08);
+}
+
+/* Listen-Popup für mehrere Marker an derselben Stelle. */
+.multimarker-map__popup--list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.multimarker-map__popup-item + .multimarker-map__popup-item {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}
+
+.multimarker-map__popup-item p {
+    margin: 4px 0 0;
+}
+
+/* MapLibre legt Marker und Popups in denselben Container. Gruppen-Kreise
+ * bekommen dort einen z-index (größere Gruppen oben) - das Popup muss
+ * trotzdem immer darüber liegen. */
+.multimarker-map .maplibregl-popup {
+    z-index: 5000;
+}

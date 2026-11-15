@@ -67,7 +67,8 @@ class ContentMarkerCallbacks
     }
 
     /**
-     * Stellt sicher, dass Lat/Lng gültige Dezimalgrad-Werte sind (z.B. 47.801, -122.4).
+     * Stellt sicher, dass Lat/Lng gültige Dezimalgrad-Werte sind (z.B. 47.801, -122.4)
+     * und im jeweils erlaubten Bereich liegen.
      */
     public function validateCoordinate(mixed $value, DataContainer $dc): string
     {
@@ -77,10 +78,15 @@ class ContentMarkerCallbacks
 
         $normalized = str_replace(',', '.', (string) $value);
 
-        if (!is_numeric($normalized) || (float) $normalized < -180 || (float) $normalized > 180) {
+        // Breitengrad (lat) nur -90 bis 90, Längengrad (lng) -180 bis 180.
+        $limit = $dc->field === 'lat' ? 90 : 180;
+
+        if (!is_numeric($normalized) || abs((float) $normalized) > $limit) {
             throw new \RuntimeException(sprintf(
-                'Ungültiger Koordinatenwert "%s" – bitte Dezimalgrad angeben, z.B. 47.8011 oder -13.2894.',
-                $value
+                'Ungültiger Koordinatenwert "%s" – bitte Dezimalgrad zwischen -%d und %d angeben, z.B. 47.8011 oder 13.0947. Breiten- und Längengrad eventuell vertauscht?',
+                $value,
+                $limit,
+                $limit
             ));
         }
 

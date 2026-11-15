@@ -37,3 +37,9 @@ $GLOBALS['TL_LANG']['tl_content']['leafletRouteLinkColor'] = ['Link-Farbe ("Rout
 $GLOBALS['TL_LANG']['tl_content']['leafletAnimateFit'] = ['Zoom-Animation beim Laden', 'Beim ersten Laden sanft zur passenden Ansicht zoomen/schwenken, statt sofort zu springen.'];
 $GLOBALS['TL_LANG']['tl_content']['leafletHideAttribution'] = ['Copyright-Hinweis ausblenden', 'Achtung: Die Namensnennung "© OpenStreetMap contributors" ist bei Nutzung von OSM-Kartendaten lizenzrechtlich vorgeschrieben (ODbL). Nur deaktivieren, wenn ein Tile-Anbieter mit entsprechender Lizenz (z.B. White-Label-Tarif) verwendet wird.'];
 $GLOBALS['TL_LANG']['tl_content']['leafletTileUrl'] = ['Alternative Tile-URL', 'Optional: eigener Tile-Server, z.B. von MapTiler/Mapbox/Stadia. Leer lassen für den öffentlichen OSM-Standardserver.'];
+
+$GLOBALS['TL_LANG']['tl_content']['cluster_legend'] = 'Marker gruppieren';
+$GLOBALS['TL_LANG']['tl_content']['leafletCluster'] = ['Marker gruppieren', 'Nahe beieinander liegende Marker werden beim Herauszoomen zu einem Kreis mit der Anzahl zusammengefasst. Ein Klick darauf zoomt hinein.'];
+$GLOBALS['TL_LANG']['tl_content']['leafletClusterMaxZoom'] = ['Ab Zoomstufe nicht mehr gruppieren', 'Ab dieser Zoomstufe (1-20) werden alle Marker einzeln angezeigt. Marker mit exakt gleichen Koordinaten bleiben gruppiert und zeigen beim Klick eine Liste.'];
+$GLOBALS['TL_LANG']['tl_content']['leafletClusterRadius'] = ['Gruppierungs-Radius (Pixel)', 'Wie nah Marker auf dem Bildschirm beieinander liegen müssen, um gruppiert zu werden (10-200, Standard 60).'];
+$GLOBALS['TL_LANG']['tl_content']['leafletClusterColor'] = ['Gruppen-Farbe', 'Farbe des Gruppen-Kreises. Leer lassen, um die Markerfarbe zu verwenden.'];

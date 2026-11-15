@@ -25,9 +25,9 @@ Danach:
    Lat-Feld für eine Adresssuche (OSM-Nominatim).
 
 **Wichtig:** Ohne mindestens einen angelegten (und veröffentlichten) Marker
-bleibt die Karte leer bzw. zeigt im Frontend nur einen Hinweis, dass noch
-kein Marker existiert – erst nach dem ersten Marker wird die eigentliche
-Karte gerendert.
+wird keine Karte gerendert. Besucher sehen dann gar nichts; im Backend und in
+der Frontend-Vorschau erscheint stattdessen ein Hinweis, dass noch kein
+Marker existiert.
 
 ## Konfiguration im Backend
 
@@ -43,8 +43,9 @@ Karte gerendert.
 - **Link-Farbe ("Route berechnen")** – Hex-Farbe für den Routing-Link im
   Tooltip (Standard: `004080`). Leer lassen, um stattdessen die Markerfarbe
   zu verwenden.
-- **OSM-spezifisch**: Copyright-Hinweis ausblenden (siehe Lizenzhinweis
-  unten), alternative Tile-URL (z.B. MapTiler/Mapbox/Stadia)
+- **OSM-spezifisch** (nur bei Anbieter OpenStreetMap sichtbar):
+  Copyright-Hinweis ausblenden (siehe Lizenzhinweis unten), alternative
+  Tile-URL (z.B. MapTiler/Mapbox/Stadia)
 - **Google-spezifisch**: API-Key (Pflicht, siehe Google Cloud Console),
   Map-ID (optional – aktiviert Googles echte Pin-Form in der Markerfarbe
   über "Advanced Markers"; ohne Map-ID kein Graustufen-Modus möglich, da
@@ -57,6 +58,29 @@ Karte gerendert.
   Stil-Auswahl), sowie "Zoom-Animation beim Laden" (standardmäßig aus, damit
   die Karte sofort in der passenden Ansicht startet statt sichtbar
   heranzuzoomen)
+
+### Marker gruppieren (Clustering)
+
+Optional über **"Marker gruppieren"** aktivierbar (einheitlich für alle drei
+Kartenanbieter):
+
+- Nahe beieinander liegende Marker werden beim Herauszoomen zu einem Kreis
+  mit der Anzahl zusammengefasst. Ein Klick zoomt so weit hinein, bis sich
+  die Gruppe auflöst.
+- **Ab Zoomstufe nicht mehr gruppieren** (1–20, Standard 15) – ab dieser
+  Zoomstufe werden alle Marker einzeln angezeigt.
+- **Gruppierungs-Radius** (10–200 px, Standard 60) – wie nah Marker auf dem
+  Bildschirm beieinander liegen müssen, um gruppiert zu werden.
+- **Gruppen-Farbe** – Farbe des Kreises; leer = Markerfarbe. Die Zahl wird
+  automatisch weiß oder dunkel dargestellt, je nachdem was besser lesbar ist.
+- Marker mit **exakt gleichen Koordinaten** (z.B. mehrere Firmen an einer
+  Adresse) bleiben auch bei höchster Zoomstufe als Kreis gruppiert und
+  zeigen beim Klick ein Listen-Popup mit allen Einträgen samt Routing-Link.
+
+Die Gruppierung rechnet die Bibliothek [Supercluster](https://github.com/mapbox/supercluster)
+(ISC-Lizenz). Sie wird **lokal mitgeliefert** (`public/vendor/supercluster/`,
+kein CDN) und nur geladen, wenn bei einer Karte auf der Seite die
+Gruppierung aktiv ist.
 
 ### Bedienung (Desktop & Mobile)
 

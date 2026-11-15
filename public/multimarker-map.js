@@ -89,14 +89,300 @@
         };
     }
 
-    function buildPopupHtml(m, linkColor) {
-        var html = '<div class="multimarker-map__popup"><strong>' + escapeHtml(m.title) + '</strong>';
+    function buildPopupBody(m, linkColor) {
+        var html = '<strong>' + escapeHtml(m.title) + '</strong>';
         if (m.tooltip) {
             html += '<p>' + m.tooltip + '</p>';
         }
         var colorStyle = linkColor ? ' style="color:' + linkColor + '"' : '';
-        html += '<a href="' + m.routeUrl + '" target="_blank" rel="noopener" class="multimarker-map__route-link"' + colorStyle + '>Route berechnen</a></div>';
+        html += '<a href="' + m.routeUrl + '" target="_blank" rel="noopener" class="multimarker-map__route-link"' + colorStyle + '>Route berechnen</a>';
         return html;
+    }
+
+    function buildPopupHtml(m, linkColor) {
+        return '<div class="multimarker-map__popup">' + buildPopupBody(m, linkColor) + '</div>';
+    }
+
+    /**
+     * Listen-Popup für mehrere Marker an (nahezu) derselben Stelle: jeder
+     * Eintrag mit Titel, Tooltip-Text und eigenem Routing-Link.
+     */
+    function buildListPopupHtml(items, markers, linkColor) {
+        var html = '<div class="multimarker-map__popup multimarker-map__popup--list">';
+        items.forEach(function (i) {
+            html += '<div class="multimarker-map__popup-item">' + buildPopupBody(markers[i], linkColor) + '</div>';
+        });
+        return html + '</div>';
+    }
+
+    // ---------- Marker gruppieren (Clustering, alle Anbieter) ----------
+
+    /*
+     * Die eigentliche Gruppierungs-Logik übernimmt Supercluster (ISC-Lizenz,
+     * lokal unter public/vendor/supercluster/ mitgeliefert, kein CDN). Die
+     * Darstellung (Kreis mit Anzahl) und das Ein-/Ausblenden der Marker
+     * erledigt pro Kartenanbieter ein kleiner "Adapter" (siehe
+     * initLeafletMap/initGoogleMap/initOpenFreeMapMap). Dadurch sehen Gruppen
+     * bei allen drei Anbietern gleich aus und verhalten sich gleich.
+     */
+    var superclusterCallbacks = null;
+
+    function loadSupercluster(src, callback) {
+        if (window.Supercluster) {
+            callback();
+            return;
+        }
+
+        if (superclusterCallbacks) {
+            superclusterCallbacks.push(callback);
+            return;
+        }
+
+        superclusterCallbacks = [callback];
+
+        var done = function () {
+            var callbacks = superclusterCallbacks;
+            superclusterCallbacks = null;
+            if (!window.Supercluster) {
+                // z.B. wenn die Seite einen AMD-Loader (require.js) nutzt und
+                // die Bibliothek sich dort statt global registriert hat.
+                console.warn('MultiMarkerMap: Supercluster konnte nicht geladen werden, Marker werden ungruppiert angezeigt.');
+            }
+            callbacks.forEach(function (cb) { cb(); });
+        };
+
+        var script = document.createElement('script');
+        script.src = src;
+        script.onload = done;
+        script.onerror = done;
+        document.head.appendChild(script);
+    }
+
+    function getClusterOptions(el) {
+        if (el.dataset.cluster !== '1') {
+            return null;
+        }
+
+        return {
+            maxZoom: parseInt(el.dataset.clusterMaxZoom, 10) || 15,
+            radius: parseInt(el.dataset.clusterRadius, 10) || 60,
+            color: el.dataset.clusterColor || el.dataset.markerColor || '#e63946',
+            script: el.dataset.clusterScript || '',
+        };
+    }
+
+    /**
+     * Lädt Supercluster nur nach, wenn bei diesem Element "Marker gruppieren"
+     * aktiv ist, und startet danach die eigentliche Karten-Initialisierung.
+     */
+    function withClusterLibrary(el, init) {
+        var options = getClusterOptions(el);
+        if (!options || !options.script) {
+            init(el);
+            return;
+        }
+        loadSupercluster(options.script, function () {
+            init(el);
+        });
+    }
+
+    // Weiß oder Dunkelgrau als Zahlenfarbe - je nachdem, was auf der
+    // gewählten Gruppen-Farbe besser lesbar ist (relative Luminanz).
+    function getContrastTextColor(hexColor) {
+        var hex = (hexColor || '').replace('#', '');
+        if (hex.length === 3) {
+            hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        var num = parseInt(hex, 16);
+        if (isNaN(num)) {
+            return '#ffffff';
+        }
+        var channel = function (c) {
+            c /= 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        };
+        var luminance = 0.2126 * channel(num >> 16) + 0.7152 * channel((num >> 8) & 0xFF) + 0.0722 * channel(num & 0xFF);
+        return luminance > 0.45 ? '#1a1a1a' : '#ffffff';
+    }
+
+    function getClusterSize(count) {
+        if (count < 10) {
+            return 36;
+        }
+        return count < 100 ? 42 : 50;
+    }
+
+    function formatClusterCount(count) {
+        return count >= 1000 ? Math.round(count / 1000) + 'k' : String(count);
+    }
+
+    /**
+     * Gruppen-Kreis als SVG: halbtransparenter Außenring + voller Kreis mit
+     * weißem Rand und der Anzahl in der Mitte. Als SVG (statt HTML/CSS),
+     * damit dieselbe Grafik auch bei Google ohne Map-ID (klassische Marker
+     * mit Bild-Icon) verwendet werden kann.
+     */
+    function buildClusterSvg(count, hexColor) {
+        var size = getClusterSize(count);
+        var half = size / 2;
+        var fontSize = count < 100 ? 14 : 13;
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' +
+            '<circle cx="' + half + '" cy="' + half + '" r="' + half + '" fill="' + hexColor + '" fill-opacity="0.35"/>' +
+            '<circle cx="' + half + '" cy="' + half + '" r="' + (half - 5) + '" fill="' + hexColor + '" stroke="#ffffff" stroke-width="2"/>' +
+            '<text x="50%" y="50%" dy="0.35em" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="' + fontSize + '" font-weight="700" fill="' + getContrastTextColor(hexColor) + '">' +
+            formatClusterCount(count) + '</text>' +
+            '</svg>';
+    }
+
+    function buildClusterElement(count, hexColor) {
+        var size = getClusterSize(count);
+        var el = document.createElement('div');
+        el.className = 'multimarker-map__cluster';
+        el.style.width = size + 'px';
+        el.style.height = size + 'px';
+        el.innerHTML = buildClusterSvg(count, hexColor);
+        el.setAttribute('role', 'button');
+        el.setAttribute('title', formatClusterCount(count) + ' Marker');
+        return el;
+    }
+
+    /**
+     * Gemeinsame Gruppierungs-Logik für alle Anbieter.
+     *
+     * adapter muss bereitstellen:
+     *   getView()                       -> { bbox: [west, south, east, north], zoom } oder null
+     *   getMaxZoom()                    -> höchste mögliche Zoomstufe der Karte
+     *   createPoint(index)              -> Marker-Objekt für markers[index] (noch nicht auf der Karte)
+     *   createCluster(lat, lng, count, onClick) -> Gruppen-Objekt (noch nicht auf der Karte)
+     *   show(handle) / hide(handle)     -> Objekt auf die Karte setzen / entfernen
+     *   zoomTo(lat, lng, zoom)
+     *   openList(lat, lng, items, handle) -> Listen-Popup für mehrere Marker-Indizes
+     *   onViewChange(callback)          -> callback nach jedem Verschieben/Zoomen
+     */
+    function setupClustering(markers, options, adapter) {
+        // 1. Marker mit (auf ~10 cm) identischen Koordinaten vorab zu einem
+        //    Punkt zusammenfassen. Die lösen sich durch Zoomen nie auf, daher
+        //    zeigen sie stattdessen beim Klick ein Listen-Popup.
+        var groups = [];
+        var groupIndexByKey = {};
+
+        markers.forEach(function (m, i) {
+            var key = m.lat.toFixed(6) + ',' + m.lng.toFixed(6);
+            if (groupIndexByKey[key] === undefined) {
+                groupIndexByKey[key] = groups.length;
+                groups.push({ lat: m.lat, lng: m.lng, items: [] });
+            }
+            groups[groupIndexByKey[key]].items.push(i);
+        });
+
+        // 2. Supercluster: "maxZoom" ist dort die HÖCHSTE Zoomstufe, auf der
+        //    noch gruppiert wird. Im Backend heißt die Einstellung "ab
+        //    Zoomstufe X nicht mehr gruppieren", daher X - 1.
+        var index = new window.Supercluster({
+            radius: options.radius,
+            maxZoom: Math.max(0, options.maxZoom - 1),
+            map: function (props) {
+                return { count: props.count };
+            },
+            reduce: function (accumulated, props) {
+                accumulated.count += props.count;
+            },
+        });
+
+        index.load(groups.map(function (g, groupIndex) {
+            return {
+                type: 'Feature',
+                properties: { group: groupIndex, count: g.items.length },
+                geometry: { type: 'Point', coordinates: [g.lng, g.lat] },
+            };
+        }));
+
+        var rendered = {};
+        var pointCache = {};
+
+        function itemsOfCluster(clusterId) {
+            var items = [];
+            index.getLeaves(clusterId, Infinity).forEach(function (leaf) {
+                items = items.concat(groups[leaf.properties.group].items);
+            });
+            return items;
+        }
+
+        // Liefert [Schlüssel, Objekt] für ein Supercluster-Ergebnis. Eigene
+        // Funktion, damit jeder Klick-Handler "seine" Werte festhält.
+        function resolveFeature(feature) {
+            var props = feature.properties;
+            var lng = feature.geometry.coordinates[0];
+            var lat = feature.geometry.coordinates[1];
+            var key;
+            var handle;
+
+            if (props.cluster) {
+                key = 'c' + props.cluster_id;
+                if (rendered[key]) {
+                    return [key, rendered[key]];
+                }
+                handle = adapter.createCluster(lat, lng, props.count, function () {
+                    var expansionZoom = index.getClusterExpansionZoom(props.cluster_id);
+                    if (expansionZoom > adapter.getMaxZoom()) {
+                        // Gruppe würde sich erst jenseits der maximalen
+                        // Zoomstufe der Karte auflösen -> Liste statt Zoom.
+                        adapter.openList(lat, lng, itemsOfCluster(props.cluster_id), handle);
+                    } else {
+                        adapter.zoomTo(lat, lng, expansionZoom);
+                    }
+                });
+                return [key, handle];
+            }
+
+            var group = groups[props.group];
+
+            if (group.items.length === 1) {
+                key = 'p' + group.items[0];
+                if (!pointCache[key]) {
+                    pointCache[key] = adapter.createPoint(group.items[0]);
+                }
+                return [key, pointCache[key]];
+            }
+
+            key = 'g' + props.group;
+            if (rendered[key]) {
+                return [key, rendered[key]];
+            }
+            handle = adapter.createCluster(lat, lng, group.items.length, function () {
+                adapter.openList(lat, lng, group.items, handle);
+            });
+            return [key, handle];
+        }
+
+        function update() {
+            var view = adapter.getView();
+            if (!view) {
+                return;
+            }
+
+            var next = {};
+            index.getClusters(view.bbox, view.zoom).forEach(function (feature) {
+                var resolved = resolveFeature(feature);
+                next[resolved[0]] = resolved[1];
+            });
+
+            Object.keys(rendered).forEach(function (key) {
+                if (!next[key]) {
+                    adapter.hide(rendered[key]);
+                }
+            });
+            Object.keys(next).forEach(function (key) {
+                if (!rendered[key]) {
+                    adapter.show(next[key]);
+                }
+            });
+
+            rendered = next;
+        }
+
+        adapter.onViewChange(update);
+        update();
     }
 
     /**
@@ -257,14 +543,81 @@
             }
         });
 
-        var bounds = [];
-
-        markers.forEach(function (m) {
-            var marker = L.marker([m.lat, m.lng], { icon: icon, title: m.title }).addTo(map);
-            marker.bindPopup(buildPopupHtml(m, routeLinkColor));
-            bounds.push([m.lat, m.lng]);
+        var bounds = markers.map(function (m) {
+            return [m.lat, m.lng];
         });
 
+        var createPoint = function (i) {
+            var m = markers[i];
+            var marker = L.marker([m.lat, m.lng], { icon: icon, title: m.title });
+            marker.bindPopup(buildPopupHtml(m, routeLinkColor));
+            return marker;
+        };
+
+        var clusterOptions = getClusterOptions(el);
+
+        if (clusterOptions && window.Supercluster) {
+            // Einpassen VOR dem Gruppieren, damit die erste Berechnung schon
+            // mit dem endgültigen Ausschnitt arbeitet (bei Animation folgt
+            // ohnehin noch ein "moveend").
+            fitLeafletBounds(map, el, bounds, animateFit);
+
+            setupClustering(markers, clusterOptions, {
+                getView: function () {
+                    var b = map.getBounds();
+                    return { bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], zoom: map.getZoom() };
+                },
+                getMaxZoom: function () {
+                    return map.getMaxZoom();
+                },
+                createPoint: createPoint,
+                createCluster: function (lat, lng, count, onClick) {
+                    var size = getClusterSize(count);
+                    var marker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: 'multimarker-map__cluster',
+                            html: buildClusterSvg(count, clusterOptions.color),
+                            iconSize: [size, size],
+                            iconAnchor: [size / 2, size / 2],
+                        }),
+                        title: formatClusterCount(count) + ' Marker',
+                        // Gruppen über einzelnen Pins, größere Gruppen oben.
+                        zIndexOffset: 1000 + count,
+                    });
+                    marker.on('click', onClick);
+                    return marker;
+                },
+                show: function (handle) {
+                    handle.addTo(map);
+                },
+                hide: function (handle) {
+                    handle.remove();
+                },
+                zoomTo: function (lat, lng, zoom) {
+                    map.setView([lat, lng], zoom);
+                },
+                openList: function (lat, lng, items) {
+                    var size = getClusterSize(items.length);
+                    L.popup({ offset: [0, 5 - size / 2], maxHeight: 280 })
+                        .setLatLng([lat, lng])
+                        .setContent(buildListPopupHtml(items, markers, routeLinkColor))
+                        .openOn(map);
+                },
+                onViewChange: function (callback) {
+                    map.on('moveend', callback);
+                },
+            });
+            return;
+        }
+
+        markers.forEach(function (m, i) {
+            createPoint(i).addTo(map);
+        });
+
+        fitLeafletBounds(map, el, bounds, animateFit);
+    }
+
+    function fitLeafletBounds(map, el, bounds, animateFit) {
         if (bounds.length > 1) {
             var fitPadding = getFitPadding(el);
             map.fitBounds(bounds, {
@@ -366,7 +719,18 @@
         var pinElementCtor = useAdvancedMarkers ? google.maps.marker.PinElement : null;
         var icon = useAdvancedMarkers ? null : buildGoogleIcon(markerColor);
 
-        markers.forEach(function (m) {
+        // Klassische Marker haben setMap(), Advanced Markers die Eigenschaft
+        // "map" - beides hier vereinheitlicht.
+        var setMarkerMap = function (marker, targetMap) {
+            if (typeof marker.setMap === 'function') {
+                marker.setMap(targetMap);
+            } else {
+                marker.map = targetMap;
+            }
+        };
+
+        var createPoint = function (i) {
+            var m = markers[i];
             var position = { lat: m.lat, lng: m.lng };
             var marker;
 
@@ -378,25 +742,104 @@
                 });
                 marker = new google.maps.marker.AdvancedMarkerElement({
                     position: position,
-                    map: map,
                     title: m.title,
                     content: pin.element,
                 });
             } else {
-                marker = new google.maps.Marker({ position: position, map: map, icon: icon, title: m.title });
+                marker = new google.maps.Marker({ position: position, icon: icon, title: m.title });
             }
-
-            bounds.extend(position);
 
             marker.addListener('click', function () {
                 infoWindow.setContent(buildPopupHtml(m, routeLinkColor));
-                infoWindow.open(map, marker);
+                infoWindow.open({ anchor: marker, map: map });
             });
+
+            return marker;
+        };
+
+        markers.forEach(function (m) {
+            bounds.extend({ lat: m.lat, lng: m.lng });
         });
 
         if (markers.length > 1) {
             map.fitBounds(bounds, getFitPadding(el));
         }
+
+        var clusterOptions = getClusterOptions(el);
+
+        if (clusterOptions && window.Supercluster) {
+            setupClustering(markers, clusterOptions, {
+                getView: function () {
+                    // Vor dem ersten "idle" kennt Google den Ausschnitt noch
+                    // nicht - dann einfach auf das idle-Event warten.
+                    var b = map.getBounds();
+                    if (!b) {
+                        return null;
+                    }
+                    var ne = b.getNorthEast();
+                    var sw = b.getSouthWest();
+                    return { bbox: [sw.lng(), sw.lat(), ne.lng(), ne.lat()], zoom: map.getZoom() };
+                },
+                getMaxZoom: function () {
+                    return map.get('maxZoom') || 21;
+                },
+                createPoint: createPoint,
+                createCluster: function (lat, lng, count, onClick) {
+                    var size = getClusterSize(count);
+                    var title = formatClusterCount(count) + ' Marker';
+                    var marker;
+
+                    if (useAdvancedMarkers) {
+                        var content = buildClusterElement(count, clusterOptions.color);
+                        // Advanced Markers sitzen mit der UNTERKANTE auf der
+                        // Koordinate - für den Kreis soll es die Mitte sein.
+                        content.style.transform = 'translateY(50%)';
+                        marker = new google.maps.marker.AdvancedMarkerElement({
+                            position: { lat: lat, lng: lng },
+                            title: title,
+                            content: content,
+                            zIndex: 1000 + count,
+                        });
+                    } else {
+                        marker = new google.maps.Marker({
+                            position: { lat: lat, lng: lng },
+                            title: title,
+                            zIndex: 1000 + count,
+                            icon: {
+                                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(buildClusterSvg(count, clusterOptions.color)),
+                                scaledSize: new google.maps.Size(size, size),
+                                anchor: new google.maps.Point(size / 2, size / 2),
+                            },
+                        });
+                    }
+
+                    marker.addListener('click', onClick);
+                    return marker;
+                },
+                show: function (handle) {
+                    setMarkerMap(handle, map);
+                },
+                hide: function (handle) {
+                    setMarkerMap(handle, null);
+                },
+                zoomTo: function (lat, lng, zoom) {
+                    map.setCenter({ lat: lat, lng: lng });
+                    map.setZoom(zoom);
+                },
+                openList: function (lat, lng, items, handle) {
+                    infoWindow.setContent(buildListPopupHtml(items, markers, routeLinkColor));
+                    infoWindow.open({ anchor: handle, map: map });
+                },
+                onViewChange: function (callback) {
+                    map.addListener('idle', callback);
+                },
+            });
+            return;
+        }
+
+        markers.forEach(function (m, i) {
+            setMarkerMap(createPoint(i), map);
+        });
     }
 
     // ---------- OpenFreeMap (Vektorkarte via MapLibre GL JS) ----------
@@ -531,21 +974,10 @@
 
         var bounds = new maplibregl.LngLatBounds();
 
-        markers.forEach(function (m) {
-            var markerEl = buildMapLibreMarkerElement(markerColor);
-            // 'anchor: bottom' erzwingt, dass das Popup immer OBERHALB des
-            // Markers aufklappt (Spitze zeigt nach unten auf den Marker) -
-            // MapLibre würde sonst je nach verfügbarem Platz automatisch
-            // zwischen oben/unten wechseln, anders als bei Leaflet/Google.
-            // offset: 38 statt der Bibliotheks-üblichen 25px, damit die
-            // Popup-Spitze am OBEREN Rand des 42px hohen Pin-Icons landet
-            // (analog zu Leaflets popupAnchor: [0, -38]) statt mittig auf
-            // Höhe des weißen Punkts im Pin.
-            var popup = new maplibregl.Popup({ offset: 38, anchor: 'bottom' }).setHTML(buildPopupHtml(m, routeLinkColor));
-
-            // MapLibre schiebt die Karte (anders als Leaflet/Google) nicht
-            // automatisch nach, wenn ein Popup am Kartenrand sonst
-            // abgeschnitten würde - das bauen wir hier selbst nach.
+        // MapLibre schiebt die Karte (anders als Leaflet/Google) nicht
+        // automatisch nach, wenn ein Popup am Kartenrand sonst
+        // abgeschnitten würde - das bauen wir hier selbst nach.
+        var keepPopupInView = function (popup) {
             popup.on('open', function () {
                 requestAnimationFrame(function () {
                     var popupEl = popup.getElement();
@@ -574,15 +1006,31 @@
                     }
                 });
             });
+            return popup;
+        };
+
+        var createPoint = function (i) {
+            var m = markers[i];
+            var markerEl = buildMapLibreMarkerElement(markerColor);
+            // 'anchor: bottom' erzwingt, dass das Popup immer OBERHALB des
+            // Markers aufklappt (Spitze zeigt nach unten auf den Marker) -
+            // MapLibre würde sonst je nach verfügbarem Platz automatisch
+            // zwischen oben/unten wechseln, anders als bei Leaflet/Google.
+            // offset: 38 statt der Bibliotheks-üblichen 25px, damit die
+            // Popup-Spitze am OBEREN Rand des 42px hohen Pin-Icons landet
+            // (analog zu Leaflets popupAnchor: [0, -38]) statt mittig auf
+            // Höhe des weißen Punkts im Pin.
+            var popup = keepPopupInView(new maplibregl.Popup({ offset: 38, anchor: 'bottom' }).setHTML(buildPopupHtml(m, routeLinkColor)));
 
             // offset: Pin-Spitze sitzt 1px über der Unterkante des Icons
             // (Platz für die Kontur), daher 1px nach unten verschieben, damit
             // die Spitze exakt auf der Koordinate liegt (wie bei Leaflet/Google).
-            new maplibregl.Marker({ element: markerEl, anchor: 'bottom', offset: [0, PIN_HEIGHT - PIN_TIP_Y] })
+            return new maplibregl.Marker({ element: markerEl, anchor: 'bottom', offset: [0, PIN_HEIGHT - PIN_TIP_Y] })
                 .setLngLat([m.lng, m.lat])
-                .setPopup(popup)
-                .addTo(map);
+                .setPopup(popup);
+        };
 
+        markers.forEach(function (m) {
             bounds.extend([m.lng, m.lat]);
         });
 
@@ -592,6 +1040,61 @@
             // per Backend-Option "Zoom-Animation beim Laden" umschaltbar.
             map.fitBounds(bounds, { padding: getFitPadding(el), maxZoom: 16, animate: animateFit });
         }
+
+        var clusterOptions = getClusterOptions(el);
+
+        if (clusterOptions && window.Supercluster) {
+            var listPopup = null;
+
+            setupClustering(markers, clusterOptions, {
+                getView: function () {
+                    var b = map.getBounds();
+                    return { bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], zoom: map.getZoom() };
+                },
+                getMaxZoom: function () {
+                    return map.getMaxZoom();
+                },
+                createPoint: createPoint,
+                createCluster: function (lat, lng, count, onClick) {
+                    var clusterEl = buildClusterElement(count, clusterOptions.color);
+                    clusterEl.style.zIndex = String(1000 + count);
+                    clusterEl.addEventListener('click', function (e) {
+                        // Sonst wertet MapLibre den Klick zusätzlich als
+                        // Klick auf die Karte und schließt das Listen-Popup.
+                        e.stopPropagation();
+                        onClick();
+                    });
+                    return new maplibregl.Marker({ element: clusterEl, anchor: 'center' }).setLngLat([lng, lat]);
+                },
+                show: function (handle) {
+                    handle.addTo(map);
+                },
+                hide: function (handle) {
+                    handle.remove();
+                },
+                zoomTo: function (lat, lng, zoom) {
+                    map.easeTo({ center: [lng, lat], zoom: zoom });
+                },
+                openList: function (lat, lng, items) {
+                    if (listPopup) {
+                        listPopup.remove();
+                    }
+                    var size = getClusterSize(items.length);
+                    listPopup = keepPopupInView(new maplibregl.Popup({ offset: size / 2, anchor: 'bottom', maxWidth: '300px' }))
+                        .setLngLat([lng, lat])
+                        .setHTML(buildListPopupHtml(items, markers, routeLinkColor))
+                        .addTo(map);
+                },
+                onViewChange: function (callback) {
+                    map.on('moveend', callback);
+                },
+            });
+            return;
+        }
+
+        markers.forEach(function (m, i) {
+            createPoint(i).addTo(map);
+        });
     }
 
     // ---------- Init ----------
@@ -618,13 +1121,17 @@
 
         if (osmEls.length) {
             loadLeaflet(function () {
-                osmEls.forEach(initLeafletMap);
+                osmEls.forEach(function (el) {
+                    withClusterLibrary(el, initLeafletMap);
+                });
             });
         }
 
         if (openFreeMapEls.length) {
             loadMapLibre(function () {
-                openFreeMapEls.forEach(initOpenFreeMapMap);
+                openFreeMapEls.forEach(function (el) {
+                    withClusterLibrary(el, initOpenFreeMapMap);
+                });
             });
         }
 
@@ -635,7 +1142,9 @@
                 return;
             }
             loadGoogleMaps(apiKey, function () {
-                googleEls.forEach(initGoogleMap);
+                googleEls.forEach(function (el) {
+                    withClusterLibrary(el, initGoogleMap);
+                });
             });
         }
     });

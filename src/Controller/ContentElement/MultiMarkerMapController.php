@@ -9,6 +9,7 @@ use Contao\CoreBundle\Controller\ContentElement\AbstractContentElementController
 use Contao\CoreBundle\DependencyInjection\Attribute\AsContentElement;
 use Contao\Environment;
 use Contao\FilesModel;
+use Contao\System;
 use Contao\Template;
 use Datashop\MultiMarkerMap\Model\MapMarkerModel;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,6 +21,13 @@ class MultiMarkerMapController extends AbstractContentElementController
     protected function getResponse(Template $template, ContentModel $model, Request $request): Response
     {
         $markers = MapMarkerModel::findPublishedByPid((int) $model->id);
+
+        // Ohne veröffentlichte Marker: Besucher sehen gar nichts (keine leere
+        // Fläche, kein Hinweistext). Der Hinweis für Redakteure erscheint nur
+        // in der Backend-Ansicht und in der Frontend-Vorschau.
+        if ($markers === null && !$this->isBackendScope($request) && !$this->isPreviewMode()) {
+            return new Response('');
+        }
 
         $markerData = [];
         $bounds = [];
@@ -73,7 +81,10 @@ class MultiMarkerMapController extends AbstractContentElementController
         $template->colorMode = $model->leafletColorMode ?: 'gray';
         $template->zoom = (int) ($model->leafletZoom ?: 13);
         $template->height = $model->leafletHeight ?: '450px';
-        $template->hideAttribution = (bool) $model->leafletHideAttribution;
+        // Nur bei OpenStreetMap/Leaflet auswählbar (Subpalette). Bei anderen
+        // Anbietern bewusst ignorieren, damit ein früher gesetzter, im
+        // Backend nicht mehr sichtbarer Haken nicht unbemerkt weiterwirkt.
+        $template->hideAttribution = $template->provider === 'osm' && (bool) $model->leafletHideAttribution;
         $template->tileUrl = $model->leafletTileUrl ?: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         // Contao speichert Colorpicker-Werte ohne führendes '#' - das ergänzen,
         // sonst ist der Hex-Wert als SVG-fill/CSS-Farbe ungültig und wird
@@ -87,6 +98,32 @@ class MultiMarkerMapController extends AbstractContentElementController
 
         $template->animateFit = (bool) $model->leafletAnimateFit;
 
+        // Marker gruppieren (Clustering über die lokal mitgelieferte
+        // Supercluster-Bibliothek, gilt einheitlich für alle drei Anbieter).
+        $template->clusterEnabled = (bool) $model->leafletCluster;
+        $template->clusterMaxZoom = max(1, min(20, (int) ($model->leafletClusterMaxZoom ?: 15)));
+        $template->clusterRadius = max(10, min(200, (int) ($model->leafletClusterRadius ?: 60)));
+
+        // Leer = Markerfarbe auch für die Gruppen-Kreise verwenden.
+        $clusterColor = trim((string) ($model->leafletClusterColor ?? ''));
+        $template->clusterColor = $clusterColor !== '' ? '#' . ltrim($clusterColor, '#') : $template->markerColor;
+
+        // Pfad zur Bibliothek explizit übergeben statt im JS aus der eigenen
+        // Script-URL abzuleiten: Contao fasst "|static"-Skripte ggf. zu einer
+        // Datei unter assets/js/ zusammen, dann stimmt der relative Pfad nicht.
+        $template->clusterScript = $request->getBasePath() . '/bundles/datashopmultimarkermap/vendor/supercluster/supercluster.min.js';
+
         return $template->getResponse();
+    }
+
+    private function isPreviewMode(): bool
+    {
+        $container = System::getContainer();
+
+        if (!$container->has('contao.security.token_checker')) {
+            return false;
+        }
+
+        return $container->get('contao.security.token_checker')->isPreviewMode();
     }
 }

@@ -7,18 +7,26 @@ use Contao\CoreBundle\DataContainer\PaletteManipulator;
 // Eigene Palette für den neuen Content-Element-Typ
 $GLOBALS['TL_DCA']['tl_content']['palettes']['multimarker_map'] =
     '{type_legend},type,headline'
-    . ';{leaflet_legend},leafletProvider,leafletZoom,leafletHeight,leafletColorMode,leafletMarkerColor,leafletRouteLinkColor,leafletHideAttribution,leafletTileUrl'
+    . ';{leaflet_legend},leafletProvider,leafletZoom,leafletHeight,leafletColorMode,leafletMarkerColor,leafletRouteLinkColor'
+    . ';{cluster_legend},leafletCluster'
     . ';{template_legend:hide},customTpl'
     . ';{protected_legend:hide},protected'
     . ';{expert_legend:hide},guests,cssID'
     . ';{invisible_legend:hide},invisible,start,stop';
 
-// leafletProvider ist ein Selector-Feld: bei "google" werden API-Key und
-// Map-ID über eine Subpalette eingeblendet, bei "openfreemap" die native
-// Style-Auswahl, sonst bleibt alles versteckt.
+// leafletProvider ist ein Selector-Feld: je nach Anbieter werden nur die
+// passenden Felder über eine Subpalette eingeblendet (OSM: Copyright-Hinweis
+// und Tile-URL, Google: API-Key und Map-ID, OpenFreeMap: Style-Auswahl).
 $GLOBALS['TL_DCA']['tl_content']['palettes']['__selector__'][] = 'leafletProvider';
+// Copyright-Hinweis und Tile-URL wirken nur bei OpenStreetMap/Leaflet.
+$GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_osm'] = 'leafletHideAttribution,leafletTileUrl';
 $GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_google'] = 'leafletGoogleApiKey,leafletGoogleMapId';
 $GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletProvider_openfreemap'] = 'leafletOpenFreeMapStyle,leafletOpenFreeMapStyleFile,leafletOpenFreeMapStyleJson,leafletAnimateFit';
+
+// "Marker gruppieren" (Clustering): Checkbox als Selector, die Detail-
+// Einstellungen erscheinen erst nach dem Aktivieren.
+$GLOBALS['TL_DCA']['tl_content']['palettes']['__selector__'][] = 'leafletCluster';
+$GLOBALS['TL_DCA']['tl_content']['subpalettes']['leafletCluster'] = 'leafletClusterMaxZoom,leafletClusterRadius,leafletClusterColor';
 
 // Integration mit datashop/contao-cookiebar-bridge (falls installiert): die
 // Bridge hängt ihr "ccbVisibility"-Feld per Schleife an alle *zum
@@ -184,4 +192,33 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['leafletTileUrl'] = [
     'inputType' => 'text',
     'eval'      => ['tl_class' => 'w50 clr', 'placeholder' => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'],
     'sql'       => "varchar(255) NOT NULL default ''",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletCluster'] = [
+    'inputType' => 'checkbox',
+    'eval'      => ['submitOnChange' => true, 'tl_class' => 'w50 m12'],
+    'sql'       => "char(1) NOT NULL default ''",
+];
+
+// Ab dieser Zoomstufe werden Marker nicht mehr gruppiert, sondern einzeln
+// angezeigt. Marker mit exakt gleichen Koordinaten bleiben auch danach als
+// Gruppe sichtbar und öffnen beim Klick ein Listen-Popup.
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletClusterMaxZoom'] = [
+    'inputType' => 'text',
+    'default'   => 15,
+    'eval'      => ['rgxp' => 'natural', 'minval' => 1, 'maxval' => 20, 'tl_class' => 'w50 clr'],
+    'sql'       => "smallint(5) unsigned NOT NULL default 15",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletClusterRadius'] = [
+    'inputType' => 'text',
+    'default'   => 60,
+    'eval'      => ['rgxp' => 'natural', 'minval' => 10, 'maxval' => 200, 'tl_class' => 'w50'],
+    'sql'       => "smallint(5) unsigned NOT NULL default 60",
+];
+
+$GLOBALS['TL_DCA']['tl_content']['fields']['leafletClusterColor'] = [
+    'inputType' => 'text',
+    'eval'      => ['tl_class' => 'w50', 'colorpicker' => true, 'isHexColor' => true, 'decodeEntities' => true],
+    'sql'       => "varchar(7) NOT NULL default ''",
 ];
